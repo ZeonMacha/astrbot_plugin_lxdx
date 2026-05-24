@@ -11,6 +11,9 @@
     },
     "api_key": {
       "description": "开发者 API key"
+    },
+    "client_id": {
+      "description": "OAuth 客户端 ID (可选，留空使用内置应用)"
     }
   }
 }

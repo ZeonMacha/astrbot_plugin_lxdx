@@ -11,6 +11,9 @@
     },
     "api_key": {
       "description": "Developer API Key"
+    },
+    "client_id": {
+      "description": "OAuth Client ID (optional, leave blank to use built-in app)"
     }
   }
 }

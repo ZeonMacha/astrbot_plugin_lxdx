@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #eee;
+    padding: 20px 24px;
+    min-width: 680px;
+    max-width: 780px;
+  }
+  .player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #f6ba31;
+  }
+  .player-name { font-size: 22px; font-weight: bold; color: #f6ba31; }
+  .player-rating { font-size: 18px; color: #9a69e7; }
+  .player-code { font-size: 11px; color: #888; }
+  .section-header {
+    font-size: 15px;
+    color: #f35871;
+    margin: 14px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #333;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th, td {
+    padding: 5px 8px;
+    text-align: left;
+    border-bottom: 1px solid #2a2a3e;
+  }
+  th {
+    color: #999;
+    font-weight: normal;
+    font-size: 11px;
+    position: sticky;
+    top: 0;
+    background: #1a1a2e;
+  }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .idx { color: #666; text-align: center; width: 24px; }
+  .title { max-width: 200px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .diff { text-align: center; }
+  .basic { color: #22bb5b; } .advanced { color: #f6ba31; } .expert { color: #f35871; } .master { color: #9a69e7; } .remaster { color: #ba67f9; }
+  .ach { text-align: right; font-variant-numeric: tabular-nums; }
+  .score { text-align: right; font-variant-numeric: tabular-nums; }
+  .rating { text-align: right; font-variant-numeric: tabular-nums; }
+  .rank { text-align: center; font-weight: bold; font-size: 11px; }
+  .rank-sssp { color: #ff6b9d; } .rank-sss { color: #ff8c00; } .rank-ssp { color: #ffa500; }
+  .rank-ap { color: #ff4757; } .rank-app { color: #ffd700; }
+  .extra { font-size: 10px; color: #888; }
+  .footer {
+    text-align: center;
+    font-size: 10px;
+    color: #555;
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+  }
+  .empty-row td { text-align: center; color: #555; padding: 16px; }
+</style>
+</head>
+<body>
+  <div class="player-header">
+    <div>
+      <div class="player-name">{{ player_name }}</div>
+      <div class="player-code">{% if friend_code %}{{ friend_code }}{% endif %} · Class {{ class_rank }}</div>
+    </div>
+    <div class="player-rating">Rating: {{ rating }}</div>
+  </div>
+
+  <div class="section-header">🏆 Best 35 (新曲) · {{ best|length }} 首</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="idx">#</th>
+        <th>曲目</th>
+        <th class="diff">难度</th>
+        <th class="ach">达成率</th>
+        <th class="score">DX分数</th>
+        <th class="rating">定数</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if best|length == 0 %}
+      <tr><td colspan="6" class="empty-row">暂无数据</td></tr>
+      {% endif %}
+      {% for rec in best %}
+      <tr>
+        <td class="idx">{{ loop.index }}</td>
+        <td class="title" title="{{ rec.title }}">{{ rec.title }}</td>
+        <td class="diff {{ rec.difficulty_css }}">{{ rec.difficulty_short }}</td>
+        <td class="ach">{{ "%.4f" | format(rec.achievement_pct) }}%</td>
+        <td class="score">{{ rec.dx_score }}</td>
+        <td class="rating">{{ "%.1f" | format(rec.level_value) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="section-header">🕐 Recent 15 (旧曲) · {{ recent|length }} 首</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="idx">#</th>
+        <th>曲目</th>
+        <th class="diff">难度</th>
+        <th class="ach">达成率</th>
+        <th class="score">DX分数</th>
+        <th class="rating">定数</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if recent|length == 0 %}
+      <tr><td colspan="6" class="empty-row">暂无数据</td></tr>
+      {% endif %}
+      {% for rec in recent %}
+      <tr>
+        <td class="idx">{{ loop.index }}</td>
+        <td class="title" title="{{ rec.title }}">{{ rec.title }}</td>
+        <td class="diff {{ rec.difficulty_css }}">{{ rec.difficulty_short }}</td>
+        <td class="ach">{{ "%.4f" | format(rec.achievement_pct) }}%</td>
+        <td class="score">{{ rec.dx_score }}</td>
+        <td class="rating">{{ "%.1f" | format(rec.level_value) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
+</body>
+</html>
