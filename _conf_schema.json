@@ -3,14 +3,22 @@
     "description": "授权模式",
     "type": "string",
     "options": ["OAuth", "api_key"],
-    "labels": ["OAuth", "开发者 API key"]
+    "labels": ["OAuth", "开发者 API key"],
+    "default": "OAuth"
   },
   "api_key": {
     "description": "开发者 API key",
-    "type": "string"
+    "type": "string",
+    "default": ""
   },
   "client_id": {
-    "description": "OAuth 客户端 ID (可选，留空使用内置应用)",
-    "type": "string"
+    "description": "OAuth 客户端 ID (除非你清楚这是什么，否则不要修改)",
+    "type": "string",
+    "default": "405bddd9-c6cb-4307-b4fa-dbd48eb6a5db"
+  },
+  "redirect_uri": {
+    "description": "OAuth 回调地址 (除非你清楚这是什么，否则不要修改)",
+    "type": "string",
+    "default": "urn:ietf:wg:oauth:2.0:oob"
   }
 }

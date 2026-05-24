@@ -1,3 +1,11 @@
+"""插件存储管理：文件目录路径和 KV key 命名。KV 操作直接委托给 Star 实例的 put_kv_data / get_kv_data / delete_kv_data。
+
+Key 命名约定（前缀 + uid）：
+  binding:{uid}  →  玩家好友码绑定
+  token:{uid}    →  OAuth Token 持久化
+  pkce:{uid}     →  PKCE 临时会话参数
+"""
+
 from __future__ import annotations
 
 import os
@@ -8,40 +16,31 @@ if TYPE_CHECKING:
 
 
 class StorageManager:
-    def __init__(
-        self,
-        plugin: Star,
-        data_dir: str,
-    ):
+    """管理文件目录路径、确保目录存在、以及 KV 操作的 key 命名。"""
+
+    def __init__(self, plugin: Star, data_dir: str):
         self._plugin = plugin
-        self._data_dir = data_dir
         self.assets_dir = f"{data_dir}/plugin_data/astrbot_plugin_lxdx/assets"
         self.cache_dir = f"{data_dir}/plugin_data/astrbot_plugin_lxdx/cache"
 
     def ensure_dirs(self) -> None:
+        """确保 assets 和 cache 目录存在。"""
         os.makedirs(self.assets_dir, exist_ok=True)
         os.makedirs(self.cache_dir, exist_ok=True)
+
+    # --- KV 操作（直接委托 AstrBot 的 KV 存储） ---
 
     async def kv_put(self, key: str, value: Any) -> None:
         await self._plugin.put_kv_data(key, value)
 
     async def kv_get(self, key: str, default: Any = None) -> Any:
-        try:
-            result = await self._plugin.get_kv_data(key)
-            if result is None:
-                return default
-            return result
-        except Exception:
-            return default
+        return await self._plugin.get_kv_data(key, default)
 
     async def kv_delete(self, key: str) -> None:
         await self._plugin.delete_kv_data(key)
 
-    def binding_key(self, user_id: str) -> str:
-        return f"binding:{user_id}"
+    # --- Key 命名 ---
 
-    def token_key(self, user_id: str) -> str:
-        return f"token:{user_id}"
-
-    def pkce_key(self, user_id: str) -> str:
-        return f"pkce:{user_id}"
+    def binding_key(self, uid: str) -> str: return f"binding:{uid}"
+    def token_key(self, uid: str) -> str:    return f"token:{uid}"
+    def pkce_key(self, uid: str) -> str:     return f"pkce:{uid}"

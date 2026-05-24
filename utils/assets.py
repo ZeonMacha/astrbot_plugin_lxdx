@@ -1,72 +1,53 @@
-import asyncio
-import os
-from pathlib import Path
+"""静态资源下载：jacket 封面图片，信号量控制并发（最大 3 同时下载）。"""
 
-import httpx
+import asyncio
+from pathlib import Path
 
 from astrbot.api import logger
 
 
 class AssetManager:
-    CDN_BASE = "https://maimai.lxns.net"
+    """管理 jacket 封面本地缓存下载。下载的图片存放于 assets_dir/jacket_{id}.png。"""
+
+    CDN = "https://maimai.lxns.net"
 
     def __init__(self, assets_dir: str):
-        self._assets_dir = Path(assets_dir)
-        self._assets_dir.mkdir(parents=True, exist_ok=True)
-        self._semaphore = asyncio.Semaphore(3)
+        self._dir = Path(assets_dir)
+        self._dir.mkdir(parents=True, exist_ok=True)
+        self._sem = asyncio.Semaphore(3)  # 并发限制：最多 3 个同时下载
 
-    def local_path(self, asset_name: str) -> Path:
-        return self._assets_dir / asset_name
+    def _exists(self, name: str) -> bool:
+        """检查本地是否已有该文件。"""
+        return (self._dir / name).exists()
 
-    def asset_exists(self, asset_name: str) -> bool:
-        return self.local_path(asset_name).exists()
-
-    async def download_asset(self, url: str, asset_name: str) -> str:
-        local = self.local_path(asset_name)
-        if local.exists():
-            return str(local)
-        async with self._semaphore:
+    async def download(self, url: str, name: str) -> str:
+        """下载单个资源，已存在则跳过。返回本地路径，失败返回空字符串。"""
+        local = self._dir / name
+        if local.exists(): return str(local)
+        async with self._sem:
             try:
-                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
-                    resp = await client.get(url)
-                    resp.raise_for_status()
-                    local.write_bytes(resp.content)
+                import httpx
+                async with httpx.AsyncClient(timeout=httpx.Timeout(30)) as c:
+                    r = await c.get(url); r.raise_for_status()
+                    local.write_bytes(r.content)
                     return str(local)
             except Exception as e:
-                logger.warning(f"Failed to download asset {asset_name}: {e}")
+                logger.warning(f"[lxdx] download {name} failed: {e}")
                 return ""
 
-    async def download_assets_batch(self, urls: dict[str, str]) -> dict[str, str]:
-        tasks = [self.download_asset(url, name) for name, url in urls.items()]
+    async def download_batch(self, urls: dict[str, str]) -> dict[str, str]:
+        """批量下载（文件名 → URL），并发执行，异常项返回空字符串。"""
+        tasks = [self.download(u, n) for n, u in urls.items()]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        result_map = {}
-        for name, result in zip(urls.keys(), results):
-            if isinstance(result, Exception):
-                result_map[name] = ""
-            else:
-                result_map[name] = result
-        return result_map
+        return {n: ("" if isinstance(r, Exception) else r) for n, r in zip(urls, results)}
 
     async def download_jacket(self, song_id: int) -> str:
-        url = f"{self.CDN_BASE}/api/v0/maimai/asset/jacket/{song_id}"
-        name = f"jacket_{song_id}.png"
-        return await self.download_asset(url, name)
+        """下载指定歌曲 ID 的封面图。"""
+        return await self.download(f"{self.CDN}/api/v0/maimai/asset/jacket/{song_id}", f"jacket_{song_id}.png")
 
     async def download_jackets_batch(self, song_ids: list[int]) -> dict[int, str]:
-        urls = {str(sid): f"{self.CDN_BASE}/api/v0/maimai/asset/jacket/{sid}" for sid in song_ids}
-        names = {str(sid): f"jacket_{sid}.png" for sid in song_ids}
-
-        async def download_one(sid: int) -> str:
-            url = f"{self.CDN_BASE}/api/v0/maimai/asset/jacket/{sid}"
-            name = f"jacket_{sid}.png"
-            return await self.download_asset(url, name)
-
-        tasks = [download_one(sid) for sid in song_ids]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        result_map: dict[int, str] = {}
-        for sid, result in zip(song_ids, results):
-            if isinstance(result, Exception):
-                result_map[sid] = ""
-            else:
-                result_map[sid] = result
-        return result_map
+        """批量下载封面图（song_id 列表），返回 {song_id: 本地路径} 字典。"""
+        tasks = [asyncio.create_task(self.download_jacket(s)) for s in song_ids]
+        results = {s: ("" if isinstance(r, Exception) else r)
+                   for s, r in zip(song_ids, await asyncio.gather(*tasks, return_exceptions=True))}
+        return results
