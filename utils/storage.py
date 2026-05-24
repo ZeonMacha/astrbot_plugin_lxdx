@@ -1,9 +1,6 @@
 """插件存储管理：文件目录路径和 KV key 命名。KV 操作直接委托给 Star 实例的 put_kv_data / get_kv_data / delete_kv_data。
 
-Key 命名约定（前缀 + uid）：
-  binding:{uid}  →  玩家好友码绑定
-  token:{uid}    →  OAuth Token 持久化
-  pkce:{uid}     →  PKCE 临时会话参数
+get_kv_data(key, False) — 第二个参数是布尔值，非默认回退值。
 """
 
 from __future__ import annotations
@@ -28,18 +25,17 @@ class StorageManager:
         os.makedirs(self.assets_dir, exist_ok=True)
         os.makedirs(self.cache_dir, exist_ok=True)
 
-    # --- KV 操作（直接委托 AstrBot 的 KV 存储） ---
-
     async def kv_put(self, key: str, value: Any) -> None:
         await self._plugin.put_kv_data(key, value)
 
-    async def kv_get(self, key: str, default: Any = None) -> Any:
-        return await self._plugin.get_kv_data(key, default)
+    async def kv_get(self, key: str) -> Any:
+        try:
+            return await self._plugin.get_kv_data(key, False)
+        except Exception:
+            return None
 
     async def kv_delete(self, key: str) -> None:
         await self._plugin.delete_kv_data(key)
-
-    # --- Key 命名 ---
 
     def binding_key(self, uid: str) -> str: return f"binding:{uid}"
     def token_key(self, uid: str) -> str:    return f"token:{uid}"
