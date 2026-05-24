@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "display_name": "落雪DX",
+    "short_desc": "国服舞萌DX插件，使用落雪（lxns）接口，支持 b50、曲目信息等功能。",
+    "desc": "国服舞萌DX插件，使用落雪（lxns）接口，支持 b50、曲目信息等功能。"
+  },
+  "config": {
+    "method": {
+      "description": "授权模式",
+      "labels": ["OAuth", "开发者 API key"]
+    },
+    "api_key": {
+      "description": "开发者 API key"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "display_name": "LxnsDX",
+    "short_desc": "A plugin for Maimai DX (China server) using Lxns API, supporting b50, song info and more.",
+    "desc": "A plugin for Maimai DX (China server) using Lxns API, supporting b50, song info and more."
+  },
+  "config": {
+    "method": {
+      "description": "Authorization Mode",
+      "labels": ["OAuth", "Developer API Key"]
+    },
+    "api_key": {
+      "description": "Developer API Key"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "method": {
+    "description": "授权模式",
+    "type": "string",
+    "options": ["OAuth", "api_key"],
+    "labels": ["OAuth", "开发者 API key"]
+  },
+  "api_key": {
+    "description": "开发者 API key",
+    "type": "string"
+  }
+}
