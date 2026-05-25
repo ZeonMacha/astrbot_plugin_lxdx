@@ -122,14 +122,15 @@ class ChunithmClient:
                 raise
         raise LxnsError("刷新令牌失败")
 
-    async def _api_get(self, url: str, uid: str = "") -> dict:
+    async def _api_get(self, url: str, uid: str = "", auth: bool = True) -> dict:
+        """通用 GET 请求：auth=False 时不附加认证头（用于公共 API）。"""
         h = self._get_httpx()
-        hdrs = await self._auth_headers(uid)
+        hdrs = await self._auth_headers(uid) if auth else {}
         for i in range(self.MAX_RETRIES + 1):
             try:
                 async with self._http_client() as c:
                     r = await c.get(url, headers=hdrs)
-                    if r.status_code == 401:
+                    if auth and r.status_code == 401:
                         raise AuthExpiredError("登录已过期，请重新授权 /lxchu login")
                     if r.status_code >= 500 and i < self.MAX_RETRIES:
                         continue
@@ -198,7 +199,9 @@ class ChunithmClient:
     # --- Song APIs ---
 
     async def get_song_list(self, uid: str = "") -> ChuSongListResult:
-        d = await self._api_get(f"{CHUNITHM_BASE}/api/v0/chunithm/song/list", uid)
+        d = await self._api_get(
+            f"{CHUNITHM_BASE}/api/v0/chunithm/song/list", auth=False
+        )
         inner = d.get("data", d)
         songs = [self._parse_song(s) for s in inner.get("songs", [])]
         genres = [
@@ -214,14 +217,18 @@ class ChunithmClient:
         return ChuSongListResult(songs=songs, genres=genres, versions=versions)
 
     async def get_song(self, song_id: int, uid: str = "") -> Optional[ChuSongInfo]:
-        d = await self._api_get(f"{CHUNITHM_BASE}/api/v0/chunithm/song/{song_id}", uid)
+        d = await self._api_get(
+            f"{CHUNITHM_BASE}/api/v0/chunithm/song/{song_id}", auth=False
+        )
         inner = d.get("data", d)
         if not inner or not inner.get("id"):
             return None
         return self._parse_song(inner)
 
     async def get_alias_list(self, uid: str = "") -> list[ChuAlias]:
-        d = await self._api_get(f"{CHUNITHM_BASE}/api/v0/chunithm/alias/list", uid)
+        d = await self._api_get(
+            f"{CHUNITHM_BASE}/api/v0/chunithm/alias/list", auth=False
+        )
         inner = d.get("data", d)
         return [
             ChuAlias(song_id=a.get("song_id", 0), aliases=a.get("aliases", []))

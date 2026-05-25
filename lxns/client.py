@@ -178,15 +178,15 @@ class LxnsClient:
                 raise AuthExpiredError(f"令牌刷新失败: {e}") from e
         return {"Authorization": f"Bearer {t.access_token}"}
 
-    async def _api_get(self, url: str, uid: str = "") -> dict:
-        """通用 GET 请求：自动附加认证头、处理 401 过期、5xx 重试。"""
+    async def _api_get(self, url: str, uid: str = "", auth: bool = True) -> dict:
+        """通用 GET 请求：auth=False 时不附加认证头（用于公共 API）。"""
         h = self._get_httpx()
-        hdrs = await self._auth_headers(uid)
+        hdrs = await self._auth_headers(uid) if auth else {}
         for i in range(self.MAX_RETRIES + 1):
             try:
                 async with self._http_client() as c:
                     r = await c.get(url, headers=hdrs)
-                    if r.status_code == 401:
+                    if auth and r.status_code == 401:
                         raise AuthExpiredError("登录已过期，请重新授权 /lxdx login")
                     if r.status_code >= 500 and i < self.MAX_RETRIES:
                         continue
@@ -211,8 +211,8 @@ class LxnsClient:
         )
 
     async def get_song_list(self, uid: str = "") -> list[SongInfo]:
-        """获取全曲目列表（用于本地歌曲索引）。"""
-        d = await self._api_get(f"{self._endpoint_base()}/song/list", uid)
+        """获取全曲目列表（公共 API，无需认证）。"""
+        d = await self._api_get(f"{BASE_URL}/api/v0/maimai/song/list", auth=False)
         return [self._parse_song(i) for i in d.get("songs", d)]
 
     async def get_player_info(self, fc: str = "", uid: str = "") -> PlayerInfo:
