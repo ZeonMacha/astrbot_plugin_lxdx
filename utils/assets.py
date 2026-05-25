@@ -9,8 +9,6 @@ from astrbot.api import logger
 class AssetManager:
     """管理 jacket 封面本地缓存下载。下载的图片存放于 assets_dir/jacket_{id}.png。"""
 
-    CDN = "https://maimai.lxns.net"
-
     def __init__(self, assets_dir: str, debug: bool = False):
         self._dir = Path(assets_dir)
         self._dir.mkdir(parents=True, exist_ok=True)
@@ -56,7 +54,8 @@ class AssetManager:
     async def download_jacket(self, song_id: int) -> str:
         """下载指定歌曲 ID 的封面图（舞萌 DX）。"""
         return await self.download(
-            f"{self.CDN}/api/v0/maimai/asset/jacket/{song_id}", f"jacket_{song_id}.png"
+            f"https://assets2.lxns.net/maimai/jacket/{song_id}.png",
+            f"jacket_{song_id}.png",
         )
 
     async def download_chunithm_jacket(self, song_id: int) -> str:
