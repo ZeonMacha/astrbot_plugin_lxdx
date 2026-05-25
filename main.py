@@ -10,18 +10,9 @@ from astrbot.api import logger
 from .lxns.auth import LxnsAuth
 from .lxns.client import LxnsClient
 from .lxns.chunithm_client import ChunithmClient
-from .lxns.models import (
-    TokenInfo,
-    LxnsError,
-    AuthExpiredError,
-    AuthRequiredError,
-    DIFFICULTY_NAMES,
-    DIFFICULTY_SHORT,
-    DIFFICULTY_COLORS,
-    CHU_DIFFICULTY_NAMES,
-    CHU_DIFFICULTY_SHORT,
-    CHU_DIFFICULTY_COLORS,
-)
+from .lxns.maimai import MaimaiHandler
+from .lxns.chunithm import ChunithmHandler
+from .lxns.models import TokenInfo, LxnsError
 from .utils.storage import StorageManager
 from .utils.song_db import SongDatabase
 from .utils.chunithm_song_db import ChuSongDatabase
@@ -49,14 +40,14 @@ class LxdxPlugin(Star):
         c = config or {}
 
         dp = self._data_path(context)
-        self._st = StorageManager(self, dp)  # 文件路径 + KV 存储
-        self._sdb = SongDatabase(self._st.cache_dir)  # 舞萌歌曲索引缓存
-        self._chu_sdb = ChuSongDatabase(self._st.cache_dir)  # 中二歌曲索引缓存
-        self._am = AssetManager(self._st.assets_dir)  # 封面图片缓存
+        self._st = StorageManager(self, dp)
+        self._sdb = SongDatabase(self._st.cache_dir)
+        self._chu_sdb = ChuSongDatabase(self._st.cache_dir)
+        self._am = AssetManager(self._st.assets_dir)
 
         self._auth = LxnsAuth(c.get("client_id", ""))
         self._ru = c.get("redirect_uri", "")
-        self._method = c.get("method", "OAuth")  # 配置中的授权模式选择
+        self._method = c.get("method", "OAuth")
         self._api_key = c.get("api_key", "")
         self._client = LxnsClient(
             self._auth,
@@ -71,9 +62,12 @@ class LxdxPlugin(Star):
             on_token_refresh=self._persist_token,
         )
 
-        self._pkce: dict[str, dict] = {}  # 内存 PKCE 参数 (uid → {verifier})
-        self._tmpl: dict[str, str] = {}  # 内存中缓存的 HTML 模板
+        self._pkce: dict[str, dict] = {}
+        self._tmpl: dict[str, str] = {}
         self._tdir = Path(__file__).parent / "templates"
+
+        self._maimai = MaimaiHandler(self)
+        self._chunithm = ChunithmHandler(self)
 
     @staticmethod
     def _data_path(ctx: Context) -> str:
@@ -86,7 +80,6 @@ class LxdxPlugin(Star):
         return getattr(ctx, "data_dir", str(Path(__file__).parent / "data"))
 
     async def initialize(self):
-        """AstrBot 插件生命周期：初始化时加载模板和缓存目录。"""
         self._load_tmpl()
         self._st.ensure_dirs()
         if self._sdb.load_cache():
@@ -103,13 +96,11 @@ class LxdxPlugin(Star):
         logger.info(f"[lxdx] init done, mode={mode_label}")
 
     async def terminate(self):
-        """AstrBot 插件生命周期：清理资源。"""
         await self._client.close()
         await self._chu_client.close()
         logger.info("[lxdx] terminated")
 
     def _load_tmpl(self):
-        """将 templates/ 下的 HTML 文件读入内存字典，供 html_render 使用。"""
         for n in (
             "help",
             "b50",
@@ -130,11 +121,11 @@ class LxdxPlugin(Star):
     # --- auth helpers ---
 
     async def _persist_token(self, uid: str, token: TokenInfo) -> None:
-        """Token 刷新回调：将新 Token 持久化到 KV。"""
+        """Token 刷新回调：将新 Token 持久化到 KV 存储。"""
         await self._st.kv_put(self._st.token_key(uid), asdict(token))
 
     async def _restore_token(self, ev: AstrMessageEvent) -> str:
-        """从 KV 恢复用户 OAuth Token 到内存缓存（LxnsAuth）。成功返回 uid，失败返回空字符串。"""
+        """从 KV 恢复用户 OAuth Token 到内存缓存。成功返回 uid，失败返回空字符串。"""
         uid = ev.get_sender_id()
         td = await self._st.kv_get(self._st.token_key(uid))
         if not td or not isinstance(td, dict):
@@ -146,33 +137,6 @@ class LxdxPlugin(Star):
         except Exception:
             await self._st.kv_delete(self._st.token_key(uid))
             return ""
-
-    # --- song helpers ---
-
-    async def _ensure_songs(self, uid: str = ""):
-        """确保歌曲数据库已加载；未加载时从 API 获取并缓存到本地 JSON。"""
-        if self._sdb.loaded:
-            return
-        try:
-            logger.info("[lxdx] fetching song list...")
-            self._sdb.load_from_list(await self._client.get_song_list(uid))
-            self._sdb.save_cache()
-            logger.info(f"[lxdx] loaded {self._sdb.song_count} songs")
-        except Exception as e:
-            logger.warning(f"[lxdx] song list fetch failed: {e}")
-
-    async def _lookup(self, q: str, uid: str = "") -> list:
-        """查找歌曲：整数按 ID 解析，字符串按标题模糊搜索。"""
-        await self._ensure_songs(uid)
-        if not self._sdb.loaded:
-            return []
-        try:
-            sid = int(q)
-            if s := self._sdb.resolve_song_id(sid):
-                return [s]
-            return []
-        except ValueError:
-            return self._sdb.get_by_title(q)
 
     # --- command router ---
 
@@ -194,149 +158,33 @@ class LxdxPlugin(Star):
 
     @lxdx_group.command("help")
     async def _help(self, ev: AstrMessageEvent):
-        """显示命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
-        t = self._tmpl.get("help")
-        if t:
-            desc = (
-                "已绑定开发者 API Key" if not self._is_oauth else "OAuth(PKCE) 交互授权"
-            )
-            url = await self.html_render(
-                t,
-                {
-                    "plugin_display_name": "落雪DX",
-                    "plugin_version": "1.0.0",
-                    "auth_mode": "OAuth(PKCE)" if self._is_oauth else "api_key",
-                    "auth_desc": desc,
-                    "commands": [
-                        {"name": "/lxdx bind <fc>", "desc": "绑定玩家好友码"},
-                        {"name": "/lxdx b50 [fc]", "desc": "Best 50 (最佳35 + 最近15)"},
-                        {"name": "/lxdx song <名称/ID>", "desc": "查询歌曲信息"},
-                        {
-                            "name": "/lxdx login [<码>]",
-                            "desc": "OAuth 授权登录 / 完成回调",
-                        },
-                    ],
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(
-                "/lxdx help|bind <fc>|b50 [fc]|song <名称/ID>|login [<码>]"
-            )
+        """显示命令列表和当前授权模式。"""
+        async for r in self._maimai.help(ev):
+            yield r
 
     # --- /lxdx bind ---
 
     @lxdx_group.command("bind")
     async def _bind(self, ev: AstrMessageEvent):
-        """绑定好友码：/lxdx bind <friend_code>。API Key 模式会验证好友码有效性。"""
-        args = self._args(ev, 2)
-        if not args:
-            yield ev.plain_result("用法: /lxdx bind <friend_code>")
-            return
-        fc = args[0]
-        uid = ev.get_sender_id()
-        if not self._is_oauth:
-            try:
-                await self._client.get_player_info(fc)
-            except Exception as e:
-                yield ev.plain_result(f"绑定失败: {e}")
-                return
-        await self._st.kv_put(self._st.binding_key(uid), fc)
-        yield ev.plain_result(f"已绑定好友码: {fc}")
+        """绑定舞萌好友码：/lxdx bind <friend_code>。"""
+        async for r in self._maimai.bind(ev):
+            yield r
 
     # --- /lxdx b50 ---
 
     @lxdx_group.command("b50")
     async def _b50(self, ev: AstrMessageEvent):
-        """查询 Best 50：/lxdx b50 [friend_code]。API Key 模式必须提供或已绑定 fc。"""
-        args = self._args(ev, 2)
-        uid = ev.get_sender_id()
-        if not self._is_oauth:
-            fc = args[0] if args else await self._st.kv_get(self._st.binding_key(uid))
-            if not fc:
-                yield ev.plain_result("请先 /lxdx bind <fc> 或 /lxdx b50 <fc>")
-                return
-            try:
-                b50 = await self._client.get_b50(fc=fc)
-            except LxnsError as e:
-                yield ev.plain_result(str(e))
-                return
-        else:
-            u = await self._restore_token(ev)
-            if not u:
-                yield ev.plain_result("请先 /lxdx login 授权")
-                return
-            try:
-                b50 = await self._client.get_b50(uid=u)
-            except AuthExpiredError as e:
-                await self._st.kv_delete(self._st.token_key(u))
-                self._auth.remove_tokens(u)
-                yield ev.plain_result(str(e))
-                return
-            except LxnsError as e:
-                yield ev.plain_result(str(e))
-                return
-
-        t = self._tmpl.get("b50")
-        if t:
-            url = await self.html_render(
-                t,
-                {
-                    "player_name": b50.player_name,
-                    "rating": b50.rating,
-                    "friend_code": b50.friend_code,
-                    "class_rank": b50.class_rank,
-                    "best": self._rec_rows(b50.best),
-                    "recent": self._rec_rows(b50.recent),
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(self._b50_text(b50))
+        """查询 Best 50（最佳35+最近15）：/lxdx b50 [friend_code]。"""
+        async for r in self._maimai.b50(ev):
+            yield r
 
     # --- /lxdx song ---
 
     @lxdx_group.command("song")
     async def _song(self, ev: AstrMessageEvent):
-        """查询歌曲信息：/lxdx song <名称 或 ID>。多个匹配时返回列表。"""
-        args = self._args(ev, 2)
-        if not args:
-            yield ev.plain_result("用法: /lxdx song <名称 或 ID>")
-            return
-        q = " ".join(args)
-        uid = ev.get_sender_id()
-        if self._is_oauth:
-            uid = await self._restore_token(ev) or ""
-        res = await self._lookup(q, uid)
-        if not res:
-            yield ev.plain_result(f"未找到: {q}")
-            return
-        if len(res) > 1:
-            ns = "\n".join(f"  · {s.title} (ID:{s.display_id})" for s in res[:10])
-            yield ev.plain_result(f"多个结果:\n{ns}")
-            return
-        s = res[0]
-        t = self._tmpl.get("song_info")
-        if t:
-            jp = await self._am.download_jacket(s.id) or ""
-            url = await self.html_render(
-                t,
-                {
-                    "song": {
-                        "title": s.title,
-                        "artist": s.artist,
-                        "genre": s.genre,
-                        "bpm": s.bpm,
-                        "display_id": s.display_id,
-                        "is_utage": s.is_utage,
-                    },
-                    "jacket_path": jp,
-                    "difficulties": self._diff_rows(s),
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(self._song_text(s))
+        """查询舞萌歌曲信息：/lxdx song <名称 或 ID>。"""
+        async for r in self._maimai.song(ev):
+            yield r
 
     # --- login ---
 
@@ -415,461 +263,42 @@ class LxdxPlugin(Star):
         ):
             yield r
 
-    # --- helpers ---
-
-    @staticmethod
-    def _rec_rows(recs: list) -> list:
-        """将 PlayerRecord 列表转为模板渲染所需的 dict 列表，包含难度简称、达成率、评级等。"""
-        return [
-            {
-                "title": r.title,
-                "difficulty_short": DIFFICULTY_SHORT[r.level_index]
-                if r.level_index < 5
-                else "?",
-                "difficulty_css": DIFFICULTY_NAMES[r.level_index]
-                .lower()
-                .replace(":", "")
-                if r.level_index < 5
-                else "",
-                "achievement_pct": r.achievement_pct,
-                "dx_score": r.dx_score,
-                "level_value": r.level_value,
-                "rank": r.rank_display,
-            }
-            for r in recs
-        ]
-
-    @staticmethod
-    def _diff_rows(song):
-        """将 SongInfo 的各难度等级、定数、note 数转为模板渲染用的 dict 列表。"""
-        rows = []
-        for i, n in enumerate(DIFFICULTY_NAMES):
-            lv = song.levels[i] if i < len(song.levels) else 0
-            df = song.difficulties[i] if i < len(song.difficulties) else 0.0
-            nt = song.notes[i] if i < len(song.notes) else None
-            if lv == 0 and not nt:
-                continue
-            rows.append(
-                {
-                    "name": n,
-                    "css_class": n.lower().replace(":", ""),
-                    "level": lv,
-                    "difficulty": df if df > 0 else None,
-                    "notes": nt,
-                }
-            )
-        return rows
-
-    @staticmethod
-    def _b50_text(b50) -> str:
-        """纯文本格式的 B50 输出（无 HTML 模板时的回退方案）。"""
-        ls = [f"{b50.player_name}  Rating: {b50.rating}", "= Best 35 ="]
-        for i, r in enumerate(b50.best, 1):
-            d = DIFFICULTY_SHORT[r.level_index] if r.level_index < 5 else "?"
-            ls.append(f"#{i} {r.title} [{d}] {r.achievement_pct:.4f}% DX:{r.dx_score}")
-        ls.append("= Recent 15 =")
-        for i, r in enumerate(b50.recent, 1):
-            d = DIFFICULTY_SHORT[r.level_index] if r.level_index < 5 else "?"
-            ls.append(f"#{i} {r.title} [{d}] {r.achievement_pct:.4f}% DX:{r.dx_score}")
-        return "\n".join(ls)
-
-    @staticmethod
-    def _song_text(song) -> str:
-        """纯文本格式的歌曲详情输出（无 HTML 模板时的回退方案）。"""
-        ls = [
-            f"{song.title}  [{song.genre}]",
-            f"艺术家:{song.artist}  BPM:{song.bpm}  ID:{song.display_id}"
-            + (" (宴)" if song.is_utage else ""),
-            "",
-            "难度        等级  定数",
-        ]
-        for i, n in enumerate(DIFFICULTY_NAMES):
-            lv = song.levels[i] if i < len(song.levels) else 0
-            df = song.difficulties[i] if i < len(song.difficulties) else 0.0
-            if lv == 0:
-                continue
-            ls.append(
-                f"  {n:<8} {lv:>4}  {df:.1f}" if df > 0 else f"  {n:<8} {lv:>4}  -"
-            )
-        return "\n".join(ls)
-
-    # --- Chunithm song helpers ---
-
-    async def _ensure_chu_songs(self, uid: str = ""):
-        if self._chu_sdb.loaded:
-            return
-        try:
-            logger.info("[lxdx] fetching Chunithm song list...")
-            res = await self._chu_client.get_song_list(uid)
-            self._chu_sdb.load_from_list(res.songs)
-            self._chu_sdb.save_cache()
-            logger.info(f"[lxdx] loaded {self._chu_sdb.song_count} Chunithm songs")
-        except Exception as e:
-            logger.warning(f"[lxdx] Chunithm song list fetch failed: {e}")
-
-    async def _chu_lookup(self, q: str, uid: str = "") -> list:
-        await self._ensure_chu_songs(uid)
-        if not self._chu_sdb.loaded:
-            return []
-        try:
-            sid = int(q)
-            if s := self._chu_sdb.get_by_id(sid):
-                return [s]
-            return []
-        except ValueError:
-            return self._chu_sdb.get_by_title(q)
-
-    @staticmethod
-    def _chu_score_rows(scores: list) -> list:
-        result = []
-        for r in scores:
-            if r.level_index < len(CHU_DIFFICULTY_SHORT):
-                d_short = CHU_DIFFICULTY_SHORT[r.level_index]
-                d_css = (
-                    CHU_DIFFICULTY_NAMES[r.level_index]
-                    .lower()
-                    .replace("'", "")
-                    .replace(" ", "-")
-                )
-            else:
-                d_short = "?"
-                d_css = ""
-            result.append(
-                {
-                    "song_name": r.song_name,
-                    "difficulty_short": d_short,
-                    "difficulty_css": d_css,
-                    "level": r.level,
-                    "score": r.score,
-                    "rating": r.rating,
-                    "rank": r.rank,
-                    "rank_display": r.rank_display,
-                    "clear": r.clear,
-                    "clear_display": r.clear_display,
-                    "full_combo": r.full_combo,
-                    "fc_display": r.fc_display,
-                    "full_chain": r.full_chain,
-                    "play_time": r.play_time or "",
-                }
-            )
-        return result
-
-    @staticmethod
-    def _chu_diff_rows(song):
-        rows = []
-        for diff in song.difficulties:
-            idx = diff.difficulty
-            name = (
-                CHU_DIFFICULTY_NAMES[idx]
-                if idx < len(CHU_DIFFICULTY_NAMES)
-                else f"LV{idx}"
-            )
-            css = name.lower().replace("'", "").replace(" ", "-")
-            notes = (
-                {
-                    "tap": diff.notes.tap if diff.notes else 0,
-                    "hold": diff.notes.hold if diff.notes else 0,
-                    "slide": diff.notes.slide if diff.notes else 0,
-                    "air": diff.notes.air if diff.notes else 0,
-                    "flick": diff.notes.flick if diff.notes else 0,
-                }
-                if diff.notes
-                else None
-            )
-            rows.append(
-                {
-                    "name": name,
-                    "css_class": css,
-                    "level": diff.level,
-                    "level_value": diff.level_value,
-                    "note_designer": diff.note_designer,
-                    "notes": notes,
-                }
-            )
-        return rows
-
     # --- /lxchu help ---
 
     @lxchu_group.command("help")
     async def _chu_help(self, ev: AstrMessageEvent):
-        """显示中二节奏命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
-        t = self._tmpl.get("chunithm_help")
-        if t:
-            desc = (
-                "已绑定开发者 API Key" if not self._is_oauth else "OAuth(PKCE) 交互授权"
-            )
-            url = await self.html_render(
-                t,
-                {
-                    "plugin_display_name": "落雪DX (中二节奏)",
-                    "plugin_version": "1.1.0",
-                    "auth_mode": "OAuth(PKCE)" if self._is_oauth else "api_key",
-                    "auth_desc": desc,
-                    "commands": [
-                        {"name": "/lxchu bind <fc>", "desc": "绑定玩家好友码"},
-                        {
-                            "name": "/lxchu bests [fc]",
-                            "desc": "Best 30 + Selection 10 + New 20",
-                        },
-                        {"name": "/lxchu recent [fc]", "desc": "Recent 50 最近游玩"},
-                        {"name": "/lxchu song <名称/ID>", "desc": "查询歌曲信息"},
-                        {
-                            "name": "/lxchu login [<码>]",
-                            "desc": "OAuth 授权登录 / 完成回调",
-                        },
-                    ],
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(
-                "/lxchu help|bind <fc>|bests [fc]|recent [fc]|song <名称/ID>|login [<码>]"
-            )
+        """显示中二节奏命令列表和当前授权模式。"""
+        async for r in self._chunithm.help(ev):
+            yield r
 
     # --- /lxchu bind ---
 
     @lxchu_group.command("bind")
     async def _chu_bind(self, ev: AstrMessageEvent):
-        """绑定中二节奏好友码：/lxchu bind <friend_code>。API Key 模式会验证好友码有效性。"""
-        args = self._args(ev, 2)
-        if not args:
-            yield ev.plain_result("用法: /lxchu bind <friend_code>")
-            return
-        fc = args[0]
-        uid = ev.get_sender_id()
-        if not self._is_oauth:
-            try:
-                await self._chu_client.get_player_info(fc=int(fc))
-            except Exception as e:
-                yield ev.plain_result(f"绑定失败: {e}")
-                return
-        await self._st.kv_put(self._st.chu_binding_key(uid), fc)
-        yield ev.plain_result(f"已绑定中二节奏好友码: {fc}")
+        """绑定中二节奏好友码：/lxchu bind <friend_code>。"""
+        async for r in self._chunithm.bind(ev):
+            yield r
 
     # --- /lxchu bests ---
 
     @lxchu_group.command("bests")
     async def _chu_bests(self, ev: AstrMessageEvent):
-        """查询中二节奏 Best 30 + Selection 10 + New 20：/lxchu bests [friend_code]。"""
-        args = self._args(ev, 2)
-        uid = ev.get_sender_id()
-        if not self._is_oauth:
-            fc_raw = (
-                args[0]
-                if args
-                else await self._st.kv_get(self._st.chu_binding_key(uid))
-            )
-            if not fc_raw:
-                yield ev.plain_result("请先 /lxchu bind <fc> 或 /lxchu bests <fc>")
-                return
-            fc = int(fc_raw)
-            try:
-                bests = await self._chu_client.get_bests(fc=fc)
-                pi = await self._chu_client.get_player_info(fc=fc)
-            except LxnsError as e:
-                yield ev.plain_result(str(e))
-                return
-        else:
-            u = await self._restore_token(ev)
-            if not u:
-                yield ev.plain_result("请先 /lxchu login 授权")
-                return
-            try:
-                bests = await self._chu_client.get_bests(uid=u)
-                pi = await self._chu_client.get_player_info(uid=u)
-            except AuthExpiredError as e:
-                await self._st.kv_delete(self._st.token_key(u))
-                self._auth.remove_tokens(u)
-                yield ev.plain_result(str(e))
-                return
-            except LxnsError as e:
-                yield ev.plain_result(str(e))
-                return
-
-        t = self._tmpl.get("chunithm_bests")
-        if t:
-            url = await self.html_render(
-                t,
-                {
-                    "player_name": pi.name,
-                    "rating": pi.rating,
-                    "friend_code": pi.friend_code,
-                    "bests": self._chu_score_rows(bests.bests),
-                    "selections": self._chu_score_rows(bests.selections),
-                    "new_bests": self._chu_score_rows(bests.new_bests),
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(self._chu_bests_text(pi, bests))
+        """查询 Best 30 + Selection 10 + New 20：/lxchu bests [friend_code]。"""
+        async for r in self._chunithm.bests(ev):
+            yield r
 
     # --- /lxchu recent ---
 
     @lxchu_group.command("recent")
     async def _chu_recent(self, ev: AstrMessageEvent):
-        """查询中二节奏 Recent 50：/lxchu recent [friend_code]。"""
-        args = self._args(ev, 2)
-        uid = ev.get_sender_id()
-        if not self._is_oauth:
-            fc_raw = (
-                args[0]
-                if args
-                else await self._st.kv_get(self._st.chu_binding_key(uid))
-            )
-            if not fc_raw:
-                yield ev.plain_result("请先 /lxchu bind <fc> 或 /lxchu recent <fc>")
-                return
-            fc = int(fc_raw)
-            try:
-                recents = await self._chu_client.get_recents(fc=fc)
-                pi = await self._chu_client.get_player_info(fc=fc)
-            except LxnsError as e:
-                yield ev.plain_result(str(e))
-                return
-        else:
-            u = await self._restore_token(ev)
-            if not u:
-                yield ev.plain_result("请先 /lxchu login 授权")
-                return
-            try:
-                recents = await self._chu_client.get_recents(uid=u)
-                pi = await self._chu_client.get_player_info(uid=u)
-            except AuthExpiredError as e:
-                await self._st.kv_delete(self._st.token_key(u))
-                self._auth.remove_tokens(u)
-                yield ev.plain_result(str(e))
-                return
-            except LxnsError as e:
-                yield ev.plain_result(str(e))
-                return
-
-        t = self._tmpl.get("chunithm_recent")
-        if t:
-            url = await self.html_render(
-                t,
-                {
-                    "player_name": pi.name,
-                    "friend_code": pi.friend_code,
-                    "recent": self._chu_score_rows(recents),
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(self._chu_recent_text(pi, recents))
+        """查询 Recent 50 最近游玩：/lxchu recent [friend_code]。"""
+        async for r in self._chunithm.recent(ev):
+            yield r
 
     # --- /lxchu song ---
 
     @lxchu_group.command("song")
     async def _chu_song(self, ev: AstrMessageEvent):
-        """查询中二节奏歌曲信息：/lxchu song <名称 或 ID>。多个匹配时返回列表。"""
-        args = self._args(ev, 2)
-        if not args:
-            yield ev.plain_result("用法: /lxchu song <名称 或 ID>")
-            return
-        q = " ".join(args)
-        uid = ev.get_sender_id()
-        if self._is_oauth:
-            uid = await self._restore_token(ev) or ""
-        res = await self._chu_lookup(q, uid)
-        if not res:
-            yield ev.plain_result(f"未找到: {q}")
-            return
-        if len(res) > 1:
-            ns = "\n".join(f"  · {s.title} (ID:{s.id})" for s in res[:10])
-            yield ev.plain_result(f"多个结果:\n{ns}")
-            return
-        s = res[0]
-        t = self._tmpl.get("chunithm_song_info")
-        if t:
-            jp = await self._am.download_chunithm_jacket(s.id) or ""
-            url = await self.html_render(
-                t,
-                {
-                    "song": {
-                        "title": s.title,
-                        "artist": s.artist,
-                        "genre": s.genre,
-                        "bpm": s.bpm,
-                        "id": s.id,
-                        "map": s.map,
-                    },
-                    "jacket_path": jp,
-                    "difficulties": self._chu_diff_rows(s),
-                },
-            )
-            yield ev.image_result(url)
-        else:
-            yield ev.plain_result(self._chu_song_text(s))
-
-    # --- Chunithm text fallback helpers ---
-
-    @staticmethod
-    def _chu_bests_text(pi, bests) -> str:
-        ls = [f"{pi.name}  Rating: {pi.rating:.2f}", "= Best 30 ="]
-        for i, r in enumerate(bests.bests, 1):
-            d = (
-                CHU_DIFFICULTY_SHORT[r.level_index]
-                if r.level_index < len(CHU_DIFFICULTY_SHORT)
-                else "?"
-            )
-            ls.append(
-                f"#{i} {r.song_name} [{d}{r.level}] {r.score} {r.rank_display} {r.clear_display}"
-            )
-        ls.append("= Selection 10 =")
-        for i, r in enumerate(bests.selections, 1):
-            d = (
-                CHU_DIFFICULTY_SHORT[r.level_index]
-                if r.level_index < len(CHU_DIFFICULTY_SHORT)
-                else "?"
-            )
-            ls.append(
-                f"#{i} {r.song_name} [{d}{r.level}] {r.score} {r.rank_display} {r.clear_display}"
-            )
-        ls.append("= New 20 =")
-        for i, r in enumerate(bests.new_bests, 1):
-            d = (
-                CHU_DIFFICULTY_SHORT[r.level_index]
-                if r.level_index < len(CHU_DIFFICULTY_SHORT)
-                else "?"
-            )
-            ls.append(
-                f"#{i} {r.song_name} [{d}{r.level}] {r.score} {r.rank_display} {r.clear_display}"
-            )
-        return "\n".join(ls)
-
-    @staticmethod
-    def _chu_recent_text(pi, recents) -> str:
-        ls = [f"{pi.name}  好友码: {pi.friend_code}", "= Recent 50 ="]
-        for i, r in enumerate(recents, 1):
-            d = (
-                CHU_DIFFICULTY_SHORT[r.level_index]
-                if r.level_index < len(CHU_DIFFICULTY_SHORT)
-                else "?"
-            )
-            ls.append(
-                f"#{i} {r.song_name} [{d}{r.level}] {r.score} {r.rank_display} {r.clear_display}"
-            )
-        return "\n".join(ls)
-
-    @staticmethod
-    def _chu_song_text(song) -> str:
-        ls = [
-            f"{song.title}  [{song.genre}]",
-            f"艺术家:{song.artist}  BPM:{song.bpm}  ID:{song.id}",
-            "",
-            "难度          等级  定数  谱师",
-        ]
-        for diff in song.difficulties:
-            idx = diff.difficulty
-            name = (
-                CHU_DIFFICULTY_NAMES[idx]
-                if idx < len(CHU_DIFFICULTY_NAMES)
-                else f"LV{idx}"
-            )
-            lv = diff.level_value
-            ls.append(
-                f"  {name:<10} {diff.level:>4}  {lv:.1f}"
-                if lv > 0
-                else f"  {name:<10} {diff.level:>4}  -"
-            )
-        return "\n".join(ls)
+        """查询中二节奏歌曲信息：/lxchu song <名称 或 ID>。"""
+        async for r in self._chunithm.song(ev):
+            yield r
