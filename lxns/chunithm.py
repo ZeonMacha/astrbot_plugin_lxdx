@@ -8,9 +8,8 @@ from .models import (
     AuthExpiredError,
     CHU_DIFFICULTY_NAMES,
     CHU_DIFFICULTY_SHORT,
+    JINJA_OPTIONS,
 )
-
-JINJA_OPTIONS = {"type": "png", "device_scale_factor_level": "ultra", "full_page": True}
 
 
 class ChunithmHandler:
@@ -226,7 +225,7 @@ class ChunithmHandler:
                         },
                     ],
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -306,7 +305,7 @@ class ChunithmHandler:
                     "selections": self._chu_score_rows(bests.selections),
                     "new_bests": self._chu_score_rows(bests.new_bests),
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -362,7 +361,7 @@ class ChunithmHandler:
                     "friend_code": pi.friend_code,
                     "recent": self._chu_score_rows(recents),
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -393,7 +392,7 @@ class ChunithmHandler:
         if t:
             if self._p._debug:
                 logger.info(f"[lxdx] rendering chunithm_song_info for {s.title}")
-            jp = await self._p._am.download_chunithm_jacket(s.id) or ""
+            uri = await self._p._am.get_chunithm_jacket_data_uri(s.id) or ""
             url = await self._p.html_render(
                 t,
                 {
@@ -405,10 +404,10 @@ class ChunithmHandler:
                         "id": s.id,
                         "map": s.map,
                     },
-                    "jacket_path": jp,
+                    "jacket_data_uri": uri,
                     "difficulties": self._chu_diff_rows(s),
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:

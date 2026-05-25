@@ -26,7 +26,6 @@
     border: 2px solid #444;
     object-fit: cover;
     background: #2a2a3e;
-    {% if jacket_path %}background-image: url('file://{{ jacket_path }}'); background-size: cover;{% endif %}
   }
   .song-meta { flex: 1; }
   .song-title { font-size: 20px; font-weight: bold; color: #f6ba31; }
@@ -76,7 +75,7 @@
 </head>
 <body>
   <div class="song-header">
-    <div class="jacket"></div>
+    {% if jacket_data_uri %}<img class="jacket" src="{{ jacket_data_uri }}" alt="jacket">{% else %}<div class="jacket"></div>{% endif %}
     <div class="song-meta">
       <div class="song-title">{{ song.title }}</div>
       <div class="song-artist">{{ song.artist }}</div>

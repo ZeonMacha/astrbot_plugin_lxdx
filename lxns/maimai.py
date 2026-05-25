@@ -8,9 +8,8 @@ from .models import (
     AuthExpiredError,
     DIFFICULTY_NAMES,
     DIFFICULTY_SHORT,
+    JINJA_OPTIONS,
 )
-
-JINJA_OPTIONS = {"type": "png", "device_scale_factor_level": "ultra", "full_page": True}
 
 
 class MaimaiHandler:
@@ -79,7 +78,7 @@ class MaimaiHandler:
                         },
                     ],
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -156,7 +155,7 @@ class MaimaiHandler:
                     "best": self._rec_rows(b50.best),
                     "recent": self._rec_rows(b50.recent),
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -187,7 +186,7 @@ class MaimaiHandler:
         if t:
             if self._p._debug:
                 logger.info(f"[lxdx] rendering song_info for {s.title}")
-            jp = await self._p._am.download_jacket(s.id) or ""
+            uri = await self._p._am.get_jacket_data_uri(s.id) or ""
             url = await self._p.html_render(
                 t,
                 {
@@ -199,10 +198,10 @@ class MaimaiHandler:
                         "display_id": s.display_id,
                         "is_utage": s.is_utage,
                     },
-                    "jacket_path": jp,
+                    "jacket_data_uri": uri,
                     "difficulties": self._diff_rows(s),
                 },
-                JINJA_OPTIONS,
+                options=JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:

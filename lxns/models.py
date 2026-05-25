@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 from enum import IntEnum, StrEnum
 
+JINJA_OPTIONS = {"type": "png", "device_scale_factor_level": "ultra", "full_page": True}
+
 
 class DifficultyIndex(IntEnum):
     """难度索引：0=BASIC, 1=ADVANCED, 2=EXPERT, 3=MASTER, 4=Re:MASTER"""
