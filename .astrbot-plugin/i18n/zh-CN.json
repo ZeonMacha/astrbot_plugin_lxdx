@@ -13,7 +13,10 @@
       "description": "开发者 API key"
     },
     "client_id": {
-      "description": "OAuth 客户端 ID (可选，留空使用内置应用)"
+      "description": "OAuth 客户端 ID (除非你清楚这是什么，否则不要修改)"
+    },
+    "redirect_uri": {
+      "description": "OAuth 回调地址 (除非你清楚这是什么，否则不要修改)"
     }
   }
 }

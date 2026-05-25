@@ -37,5 +37,8 @@ class StorageManager:
     async def kv_delete(self, key: str) -> None:
         await self._plugin.delete_kv_data(key)
 
-    def binding_key(self, uid: str) -> str: return f"binding:{uid}"
-    def token_key(self, uid: str) -> str:    return f"token:{uid}"
+    def binding_key(self, uid: str) -> str:
+        return f"binding:{uid}"
+
+    def token_key(self, uid: str) -> str:
+        return f"token:{uid}"

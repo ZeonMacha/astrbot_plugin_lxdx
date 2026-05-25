@@ -27,10 +27,12 @@ class SongDatabase:
         self._loaded = False
 
     @property
-    def loaded(self) -> bool: return self._loaded
+    def loaded(self) -> bool:
+        return self._loaded
 
     @property
-    def song_count(self) -> int: return len(self._by_id)
+    def song_count(self) -> int:
+        return len(self._by_id)
 
     def get_by_id(self, sid: int) -> SongInfo | None:
         """按 ID 精确查找歌曲。"""
@@ -41,13 +43,18 @@ class SongDatabase:
         q = title.lower().strip()
         res = [s for k, ss in self._by_title.items() if q in k for s in ss]
         if not res:
-            res = [s for k, ss in self._by_title.items()
-                   if all(c in k for c in q if c.strip()) for s in ss]
+            res = [
+                s
+                for k, ss in self._by_title.items()
+                if all(c in k for c in q if c.strip())
+                for s in ss
+            ]
         return res
 
     def load_from_list(self, songs: list[SongInfo]) -> None:
         """用 API 返回的 SongInfo 列表替换整个内存索引（清空旧数据）。"""
-        self._by_id.clear(); self._by_title.clear()
+        self._by_id.clear()
+        self._by_title.clear()
         for s in songs:
             self._by_id[s.id] = s
             self._by_title.setdefault(s.title.lower().strip(), []).append(s)
@@ -56,24 +63,43 @@ class SongDatabase:
     def save_cache(self) -> None:
         """将当前内存索引序列化为 JSON 缓存在 songs.json。"""
         self._dir.mkdir(parents=True, exist_ok=True)
-        data = [{"id": s.id, "title": s.title, "artist": s.artist, "genre": s.genre,
-                 "bpm": s.bpm, "version": s.version, "is_utage": s.is_utage,
-                 "levels": s.levels, "difficulties": s.difficulties,
-                 "dx_difficulties": s.dx_difficulties, "notes": s.notes,
-                 "image_url": s.image_url} for s in self._by_id.values()]
-        (self._dir / "songs.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        data = [
+            {
+                "id": s.id,
+                "title": s.title,
+                "artist": s.artist,
+                "genre": s.genre,
+                "bpm": s.bpm,
+                "version": s.version,
+                "is_utage": s.is_utage,
+                "levels": s.levels,
+                "difficulties": s.difficulties,
+                "dx_difficulties": s.dx_difficulties,
+                "notes": s.notes,
+                "image_url": s.image_url,
+            }
+            for s in self._by_id.values()
+        ]
+        (self._dir / "songs.json").write_text(
+            json.dumps(data, ensure_ascii=False), encoding="utf-8"
+        )
 
     def load_cache(self) -> bool:
         """从 songs.json 加载缓存的歌曲索引。返回是否成功。"""
         p = self._dir / "songs.json"
-        if not p.exists(): return False
+        if not p.exists():
+            return False
         try:
-            self.load_from_list([SongInfo(**i) for i in json.loads(p.read_text("utf-8"))])
+            self.load_from_list(
+                [SongInfo(**i) for i in json.loads(p.read_text("utf-8"))]
+            )
             return True
-        except Exception: return False
+        except Exception:
+            return False
 
     def resolve_song_id(self, raw: int) -> SongInfo | None:
         """兼容 DX/标准曲三种 ID 格式：原始 → raw+10000 → raw%10000。"""
         for did in (raw, raw + 10000, raw % 10000):
-            if (s := self._by_id.get(did)): return s
+            if s := self._by_id.get(did):
+                return s
         return None

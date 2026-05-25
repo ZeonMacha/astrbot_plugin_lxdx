@@ -20,6 +20,7 @@ from .models import TokenInfo
 @dataclass
 class PKCEParams:
     """PKCE 参数：code_verifier（原始随机串）、code_challenge（S256 哈希）、state（防 CSRF）。"""
+
     code_verifier: str
     code_challenge: str
     state: str
@@ -27,6 +28,7 @@ class PKCEParams:
 
 class LxnsAuth:
     """OAuth 授权管理：PKCE 生成、授权 URL 构建、Token 内存缓存。"""
+
     AUTHORIZE_URL = "https://maimai.lxns.net/oauth/authorize"
     TOKEN_URL = "https://maimai.lxns.net/api/v0/oauth/token"
 
@@ -50,21 +52,31 @@ class LxnsAuth:
         s = base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode("ascii")
         return PKCEParams(code_verifier=cv, code_challenge=cc, state=s)
 
-    def build_authorize_url(self, pkce: PKCEParams, redirect_uri: str, scope: str = "") -> str:
+    def build_authorize_url(
+        self, pkce: PKCEParams, redirect_uri: str, scope: str = ""
+    ) -> str:
         """构建 OAuth 授权跳转 URL。redirect_uri 必填，scope 可选（如 "read_player read_user_profile"）。"""
         p = {
-            "response_type": "code", "client_id": self.client_id,
-            "redirect_uri": redirect_uri, "state": pkce.state,
-            "code_challenge": pkce.code_challenge, "code_challenge_method": "S256",
+            "response_type": "code",
+            "client_id": self.client_id,
+            "redirect_uri": redirect_uri,
+            "state": pkce.state,
+            "code_challenge": pkce.code_challenge,
+            "code_challenge_method": "S256",
         }
         if scope:
             p["scope"] = scope
         return f"{self.AUTHORIZE_URL}?{urllib.parse.urlencode(p)}"
 
     # Token 内存缓存管理（KV 持久化由 StorageManager 负责）
-    def store_tokens(self, uid: str, t: TokenInfo) -> None: self._tokens[uid] = t
-    def get_tokens(self, uid: str) -> TokenInfo | None: return self._tokens.get(uid)
-    def remove_tokens(self, uid: str) -> None: self._tokens.pop(uid, None)
+    def store_tokens(self, uid: str, t: TokenInfo) -> None:
+        self._tokens[uid] = t
+
+    def get_tokens(self, uid: str) -> TokenInfo | None:
+        return self._tokens.get(uid)
+
+    def remove_tokens(self, uid: str) -> None:
+        self._tokens.pop(uid, None)
 
     @staticmethod
     def is_token_expired(t: TokenInfo) -> bool:
@@ -72,7 +84,12 @@ class LxnsAuth:
         return time.time() >= t.expires_at - 30
 
     @staticmethod
-    def make_token_info(access_token: str, refresh_token: str, expires_in: int) -> TokenInfo:
+    def make_token_info(
+        access_token: str, refresh_token: str, expires_in: int
+    ) -> TokenInfo:
         """根据服务器返回的令牌构建 TokenInfo（计算 expires_at 绝对时间戳）。"""
-        return TokenInfo(access_token=access_token, refresh_token=refresh_token,
-                         expires_at=time.time() + expires_in)
+        return TokenInfo(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_at=time.time() + expires_in,
+        )
