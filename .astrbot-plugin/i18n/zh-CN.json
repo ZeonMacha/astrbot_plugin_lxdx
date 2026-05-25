@@ -20,6 +20,10 @@
     "redirect_uri": {
       "description": "OAuth 回调地址",
       "hint": "除非你清楚这是什么，否则不要修改"
+    },
+    "debug": {
+      "description": "调试模式",
+      "hint": "开启后输出更多调试日志"
     }
   }
 }

@@ -8,6 +8,8 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
+from astrbot.api import logger
+
 if TYPE_CHECKING:
     from astrbot.api.star import Star
 
@@ -15,8 +17,9 @@ if TYPE_CHECKING:
 class StorageManager:
     """管理文件目录路径、确保目录存在、以及 KV 操作的 key 命名。"""
 
-    def __init__(self, plugin: Star, data_dir: str):
+    def __init__(self, plugin: Star, data_dir: str, debug: bool = False):
         self._plugin = plugin
+        self._debug = debug
         self._keys: set[str] = set()
         self.assets_dir = f"{data_dir}/plugin_data/astrbot_plugin_lxdx/assets"
         self.cache_dir = f"{data_dir}/plugin_data/astrbot_plugin_lxdx/cache"
@@ -28,6 +31,8 @@ class StorageManager:
 
     async def kv_put(self, key: str, value: Any) -> None:
         self._keys.add(key)
+        if self._debug:
+            logger.info(f"[lxdx] KV put {key}")
         await self._plugin.put_kv_data(key, value)
 
     async def kv_get(self, key: str) -> Any:
@@ -40,6 +45,8 @@ class StorageManager:
         await self._plugin.delete_kv_data(key)
 
     async def kv_clear_all(self) -> None:
+        if self._debug:
+            logger.info(f"[lxdx] KV clear all ({len(self._keys)} keys)")
         for key in self._keys:
             await self._plugin.delete_kv_data(key)
         self._keys.clear()

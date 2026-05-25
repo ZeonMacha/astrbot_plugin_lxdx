@@ -20,6 +20,10 @@
     "redirect_uri": {
       "description": "OAuth Redirect URI",
       "hint": "Do not change unless you know what this is"
+    },
+    "debug": {
+      "description": "Debug Mode",
+      "hint": "Enable to output more debug logs"
     }
   }
 }

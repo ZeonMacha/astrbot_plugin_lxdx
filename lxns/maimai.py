@@ -10,6 +10,8 @@ from .models import (
     DIFFICULTY_SHORT,
 )
 
+JINJA_OPTIONS = {"type": "png", "device_scale_factor_level": "ultra", "full_page": True}
+
 
 class MaimaiHandler:
     def __init__(self, plugin):
@@ -50,6 +52,8 @@ class MaimaiHandler:
         """显示命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
         t = self._p._tmpl.get("help")
         if t:
+            if self._p._debug:
+                logger.info("[lxdx] rendering help (Maimai)")
             desc = (
                 "已绑定开发者 API Key"
                 if not self._p._is_oauth
@@ -75,6 +79,7 @@ class MaimaiHandler:
                         },
                     ],
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -139,6 +144,8 @@ class MaimaiHandler:
 
         t = self._p._tmpl.get("b50")
         if t:
+            if self._p._debug:
+                logger.info("[lxdx] rendering b50")
             url = await self._p.html_render(
                 t,
                 {
@@ -149,6 +156,7 @@ class MaimaiHandler:
                     "best": self._rec_rows(b50.best),
                     "recent": self._rec_rows(b50.recent),
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -177,6 +185,8 @@ class MaimaiHandler:
         s = res[0]
         t = self._p._tmpl.get("song_info")
         if t:
+            if self._p._debug:
+                logger.info(f"[lxdx] rendering song_info for {s.title}")
             jp = await self._p._am.download_jacket(s.id) or ""
             url = await self._p.html_render(
                 t,
@@ -192,6 +202,7 @@ class MaimaiHandler:
                     "jacket_path": jp,
                     "difficulties": self._diff_rows(s),
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:

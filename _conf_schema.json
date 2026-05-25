@@ -23,5 +23,11 @@
     "hint": "除非你清楚这是什么，否则不要修改",
     "type": "string",
     "default": "urn:ietf:wg:oauth:2.0:oob"
+  },
+  "debug": {
+    "description": "调试模式",
+    "hint": "开启后输出更多调试日志",
+    "type": "bool",
+    "default": false
   }
 }

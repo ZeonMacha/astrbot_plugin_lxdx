@@ -40,10 +40,11 @@ class LxdxPlugin(Star):
         c = config or {}
 
         dp = self._data_path(context)
-        self._st = StorageManager(self, dp)
+        self._debug = c.get("debug", False)
+        self._st = StorageManager(self, dp, debug=self._debug)
         self._sdb = SongDatabase(self._st.cache_dir)
         self._chu_sdb = ChuSongDatabase(self._st.cache_dir)
-        self._am = AssetManager(self._st.assets_dir)
+        self._am = AssetManager(self._st.assets_dir, debug=self._debug)
 
         self._auth = LxnsAuth(c.get("client_id", ""))
         self._ru = c.get("redirect_uri", "")
@@ -51,16 +52,19 @@ class LxdxPlugin(Star):
         self._api_key = c.get("api_key", "")
         self._client = LxnsClient(
             self._auth,
+            debug=self._debug,
             redirect_uri=self._ru,
             api_key=self._api_key,
             on_token_refresh=self._persist_token,
         )
         self._chu_client = ChunithmClient(
             self._auth,
+            debug=self._debug,
             redirect_uri=self._ru,
             api_key=self._api_key,
             on_token_refresh=self._persist_token,
         )
+        self._am = AssetManager(self._st.assets_dir, debug=self._debug)
 
         self._pkce: dict[str, dict] = {}
         self._tmpl: dict[str, str] = {}
@@ -123,6 +127,8 @@ class LxdxPlugin(Star):
 
     async def _persist_token(self, uid: str, token: TokenInfo) -> None:
         """Token 刷新回调：将新 Token 持久化到 KV 存储。"""
+        if self._debug:
+            logger.info(f"[lxdx] persist token for uid={uid}")
         await self._st.kv_put(self._st.token_key(uid), asdict(token))
 
     async def _restore_token(self, ev: AstrMessageEvent) -> str:
@@ -134,6 +140,8 @@ class LxdxPlugin(Star):
         try:
             t = TokenInfo(**td)
             self._auth.store_tokens(uid, t)
+            if self._debug:
+                logger.info(f"[lxdx] restored token for uid={uid}")
             return uid
         except Exception:
             await self._st.kv_delete(self._st.token_key(uid))
@@ -239,6 +247,8 @@ class LxdxPlugin(Star):
             pk = LxnsAuth.generate_pkce()
             self._pkce[uid] = {"verifier": pk.code_verifier}
             url = self._auth.build_authorize_url(pk, self._ru, SCOPE)
+            if self._debug:
+                logger.info(f"[lxdx] {label} PKCE flow started for uid={uid}")
             yield ev.plain_result(
                 f"请打开链接授权:\n{url}\n\n完成后用 {cmd} login <授权码> 发送给我"
             )

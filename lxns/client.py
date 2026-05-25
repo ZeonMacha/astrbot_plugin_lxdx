@@ -1,6 +1,9 @@
 """LXNS API 客户端：Token 管理、HTTP 请求、自动重试、数据解析。httpx 懒加载。"""
 
 from typing import Optional, Callable, Awaitable
+import time
+
+from astrbot.api import logger
 
 from .auth import LxnsAuth
 from .models import (
@@ -36,13 +39,15 @@ class LxnsClient:
         auth: LxnsAuth,
         redirect_uri: str = "",
         api_key: str = "",
+        debug: bool = False,
         on_token_refresh: Optional[Callable[[str, TokenInfo], Awaitable[None]]] = None,
     ):
         """auth: PKCE 授权管理实例；redirect_uri: OAuth 回调地址；api_key: 开发者 Key（可选）；
-        on_token_refresh: Token 刷新时将新 Token 持久化到 KV 的回调（uid, TokenInfo）→ awaitable。"""
+        debug: 开启调试日志；on_token_refresh: Token 刷新时将新 Token 持久化到 KV 的回调（uid, TokenInfo）→ awaitable。"""
         self._auth = auth
         self._redirect_uri = redirect_uri
         self._api_key = api_key
+        self._debug = debug
         self._on_token_refresh = on_token_refresh
 
     @staticmethod
@@ -170,6 +175,8 @@ class LxnsClient:
             try:
                 t = await self.refresh_token(t.refresh_token, uid)
                 self._auth.store_tokens(uid, t)
+                if self._debug:
+                    logger.info(f"[lxdx] token refreshed for uid={uid}")
                 if callable(self._on_token_refresh):
                     await self._on_token_refresh(uid, t)
             except AuthExpiredError:
@@ -184,8 +191,14 @@ class LxnsClient:
         hdrs = await self._auth_headers(uid) if auth else {}
         for i in range(self.MAX_RETRIES + 1):
             try:
+                t0 = time.monotonic()
                 async with self._http_client() as c:
                     r = await c.get(url, headers=hdrs)
+                    elapsed = time.monotonic() - t0
+                    if self._debug:
+                        logger.info(
+                            f"[lxdx] GET {url} -> {r.status_code} ({elapsed:.2f}s)"
+                        )
                     if auth and r.status_code == 401:
                         raise AuthExpiredError("登录已过期，请重新授权 /lxdx login")
                     if r.status_code >= 500 and i < self.MAX_RETRIES:
@@ -193,6 +206,8 @@ class LxnsClient:
                     r.raise_for_status()
                     return r.json()
             except (h.TimeoutException, h.ConnectError) as e:
+                if self._debug:
+                    logger.info(f"[lxdx] GET {url} -> timeout/connect error: {e}")
                 if i < self.MAX_RETRIES:
                     continue
                 raise ApiRequestError(f"请求超时: {e}") from e

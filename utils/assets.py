@@ -11,10 +11,11 @@ class AssetManager:
 
     CDN = "https://maimai.lxns.net"
 
-    def __init__(self, assets_dir: str):
+    def __init__(self, assets_dir: str, debug: bool = False):
         self._dir = Path(assets_dir)
         self._dir.mkdir(parents=True, exist_ok=True)
-        self._sem = asyncio.Semaphore(3)  # 并发限制：最多 3 个同时下载
+        self._sem = asyncio.Semaphore(3)
+        self._debug = debug
 
     def _exists(self, name: str) -> bool:
         """检查本地是否已有该文件。"""
@@ -29,10 +30,16 @@ class AssetManager:
             try:
                 import httpx
 
+                if self._debug:
+                    logger.info(f"[lxdx] downloading {name} from {url}")
                 async with httpx.AsyncClient(timeout=httpx.Timeout(30)) as c:
                     r = await c.get(url)
                     r.raise_for_status()
                     local.write_bytes(r.content)
+                    if self._debug:
+                        logger.info(
+                            f"[lxdx] downloaded {name} ({len(r.content)} bytes)"
+                        )
                     return str(local)
             except Exception as e:
                 logger.warning(f"[lxdx] download {name} failed: {e}")

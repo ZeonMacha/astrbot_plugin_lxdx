@@ -10,6 +10,8 @@ from .models import (
     CHU_DIFFICULTY_SHORT,
 )
 
+JINJA_OPTIONS = {"type": "png", "device_scale_factor_level": "ultra", "full_page": True}
+
 
 class ChunithmHandler:
     def __init__(self, plugin):
@@ -193,6 +195,8 @@ class ChunithmHandler:
         """显示中二节奏命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
         t = self._p._tmpl.get("chunithm_help")
         if t:
+            if self._p._debug:
+                logger.info("[lxdx] rendering help (Chunithm)")
             desc = (
                 "已绑定开发者 API Key"
                 if not self._p._is_oauth
@@ -222,6 +226,7 @@ class ChunithmHandler:
                         },
                     ],
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -289,6 +294,8 @@ class ChunithmHandler:
 
         t = self._p._tmpl.get("chunithm_bests")
         if t:
+            if self._p._debug:
+                logger.info("[lxdx] rendering chunithm_bests")
             url = await self._p.html_render(
                 t,
                 {
@@ -299,6 +306,7 @@ class ChunithmHandler:
                     "selections": self._chu_score_rows(bests.selections),
                     "new_bests": self._chu_score_rows(bests.new_bests),
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -345,6 +353,8 @@ class ChunithmHandler:
 
         t = self._p._tmpl.get("chunithm_recent")
         if t:
+            if self._p._debug:
+                logger.info("[lxdx] rendering chunithm_recent")
             url = await self._p.html_render(
                 t,
                 {
@@ -352,6 +362,7 @@ class ChunithmHandler:
                     "friend_code": pi.friend_code,
                     "recent": self._chu_score_rows(recents),
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
@@ -380,6 +391,8 @@ class ChunithmHandler:
         s = res[0]
         t = self._p._tmpl.get("chunithm_song_info")
         if t:
+            if self._p._debug:
+                logger.info(f"[lxdx] rendering chunithm_song_info for {s.title}")
             jp = await self._p._am.download_chunithm_jacket(s.id) or ""
             url = await self._p.html_render(
                 t,
@@ -395,6 +408,7 @@ class ChunithmHandler:
                     "jacket_path": jp,
                     "difficulties": self._chu_diff_rows(s),
                 },
+                JINJA_OPTIONS,
             )
             yield ev.image_result(url)
         else:
