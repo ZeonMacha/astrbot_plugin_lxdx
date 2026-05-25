@@ -10,8 +10,13 @@ from astrbot.api import logger
 from .lxns.auth import LxnsAuth
 from .lxns.client import LxnsClient
 from .lxns.models import (
-    TokenInfo, LxnsError, AuthExpiredError, AuthRequiredError,
-    DIFFICULTY_NAMES, DIFFICULTY_SHORT, DIFFICULTY_COLORS,
+    TokenInfo,
+    LxnsError,
+    AuthExpiredError,
+    AuthRequiredError,
+    DIFFICULTY_NAMES,
+    DIFFICULTY_SHORT,
+    DIFFICULTY_COLORS,
 )
 from .utils.storage import StorageManager
 from .utils.song_db import SongDatabase
@@ -20,7 +25,12 @@ from .utils.assets import AssetManager
 SCOPE = "read_player read_user_profile"
 
 
-@register("astrbot_plugin_lxdx", "Par1y", "国服舞萌DX插件，使用落雪接口，支持 b50、曲目信息等功能。", "1.0.0")
+@register(
+    "astrbot_plugin_lxdx",
+    "Par1y",
+    "国服舞萌DX插件，使用落雪接口，支持 b50、曲目信息等功能。",
+    "1.0.0",
+)
 class LxdxPlugin(Star):
     """国服舞萌 DX 查分插件。
 
@@ -34,25 +44,30 @@ class LxdxPlugin(Star):
         c = config or {}
 
         dp = self._data_path(context)
-        self._st = StorageManager(self, dp)       # 文件路径 + KV 存储
+        self._st = StorageManager(self, dp)  # 文件路径 + KV 存储
         self._sdb = SongDatabase(self._st.cache_dir)  # 歌曲索引缓存
         self._am = AssetManager(self._st.assets_dir)  # 封面图片缓存
 
         self._auth = LxnsAuth(c.get("client_id", ""))
         self._ru = c.get("redirect_uri", "")
-        self._method = c.get("method", "OAuth")    # 配置中的授权模式选择
+        self._method = c.get("method", "OAuth")  # 配置中的授权模式选择
         self._api_key = c.get("api_key", "")
-        self._client = LxnsClient(self._auth, redirect_uri=self._ru, api_key=self._api_key,
-                                  on_token_refresh=self._persist_token)
+        self._client = LxnsClient(
+            self._auth,
+            redirect_uri=self._ru,
+            api_key=self._api_key,
+            on_token_refresh=self._persist_token,
+        )
 
-        self._pkce: dict[str, dict] = {}        # 内存 PKCE 参数 (uid → {verifier})
-        self._tmpl: dict[str, str] = {}         # 内存中缓存的 HTML 模板
+        self._pkce: dict[str, dict] = {}  # 内存 PKCE 参数 (uid → {verifier})
+        self._tmpl: dict[str, str] = {}  # 内存中缓存的 HTML 模板
         self._tdir = Path(__file__).parent / "templates"
 
     @staticmethod
     def _data_path(ctx: Context) -> str:
         try:
             from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+
             return get_astrbot_data_path()
         except ImportError:
             pass
@@ -78,7 +93,8 @@ class LxdxPlugin(Star):
         """将 templates/ 下的 HTML 文件读入内存字典，供 html_render 使用。"""
         for n in ("help", "b50", "song_info"):
             p = self._tdir / f"{n}.html"
-            if p.exists(): self._tmpl[n] = p.read_text("utf-8")
+            if p.exists():
+                self._tmpl[n] = p.read_text("utf-8")
 
     @property
     def _is_oauth(self) -> bool:
@@ -108,7 +124,8 @@ class LxdxPlugin(Star):
 
     async def _ensure_songs(self, uid: str = ""):
         """确保歌曲数据库已加载；未加载时从 API 获取并缓存到本地 JSON。"""
-        if self._sdb.loaded: return
+        if self._sdb.loaded:
+            return
         try:
             logger.info("[lxdx] fetching song list...")
             self._sdb.load_from_list(await self._client.get_song_list(uid))
@@ -120,10 +137,12 @@ class LxdxPlugin(Star):
     async def _lookup(self, q: str, uid: str = "") -> list:
         """查找歌曲：整数按 ID 解析，字符串按标题模糊搜索。"""
         await self._ensure_songs(uid)
-        if not self._sdb.loaded: return []
+        if not self._sdb.loaded:
+            return []
         try:
             sid = int(q)
-            if s := self._sdb.resolve_song_id(sid): return [s]
+            if s := self._sdb.resolve_song_id(sid):
+                return [s]
             return []
         except ValueError:
             return self._sdb.get_by_title(q)
@@ -132,19 +151,26 @@ class LxdxPlugin(Star):
 
     @filter.command("lxdx")
     async def lxdx(self, ev: AstrMessageEvent):
-        """主命令入口：/lxdx <help|bind|b50|song|login|callback> [...]"""
+        """主命令入口：/lxdx <help|bind|b50|song|login> [...]"""
         ps = ev.message_str.strip().split()
         if len(ps) < 2:
-            async for r in self._help(ev): yield r
+            async for r in self._help(ev):
+                yield r
             return
         sub, args = ps[1].lower(), ps[2:]
-        h = {"help": self._help, "bind": self._bind, "b50": self._b50,
-             "song": self._song, "login": self._login, "callback": self._cb}
+        h = {
+            "help": self._help,
+            "bind": self._bind,
+            "b50": self._b50,
+            "song": self._song,
+            "login": self._login,
+        }
         fn = h.get(sub)
         if fn is None:
             yield ev.plain_result(f"未知指令: {sub}，使用 /lxdx help 查看帮助")
         else:
-            async for r in fn(ev, args): yield r
+            async for r in fn(ev, args):
+                yield r
 
     # --- /lxdx help ---
 
@@ -152,31 +178,48 @@ class LxdxPlugin(Star):
         """显示命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
         t = self._tmpl.get("help")
         if t:
-            desc = "已绑定开发者 API Key" if not self._is_oauth else "OAuth(PKCE) 交互授权"
-            url = await self.html_render(t, {
-                "plugin_display_name": "落雪DX", "plugin_version": "1.0.0",
-                "auth_mode": "OAuth(PKCE)" if self._is_oauth else "api_key", "auth_desc": desc,
-                "commands": [
-                    {"name": "/lxdx bind <fc>", "desc": "绑定玩家好友码"},
-                    {"name": "/lxdx b50 [fc]", "desc": "Best 50 (最佳35 + 最近15)"},
-                    {"name": "/lxdx song <名称/ID>", "desc": "查询歌曲信息"},
-                    {"name": "/lxdx login", "desc": "OAuth 授权登录"},
-                    {"name": "/lxdx callback <码>", "desc": "完成 OAuth 回调"},
-                ],
-            })
+            desc = (
+                "已绑定开发者 API Key" if not self._is_oauth else "OAuth(PKCE) 交互授权"
+            )
+            url = await self.html_render(
+                t,
+                {
+                    "plugin_display_name": "落雪DX",
+                    "plugin_version": "1.0.0",
+                    "auth_mode": "OAuth(PKCE)" if self._is_oauth else "api_key",
+                    "auth_desc": desc,
+                    "commands": [
+                        {"name": "/lxdx bind <fc>", "desc": "绑定玩家好友码"},
+                        {"name": "/lxdx b50 [fc]", "desc": "Best 50 (最佳35 + 最近15)"},
+                        {"name": "/lxdx song <名称/ID>", "desc": "查询歌曲信息"},
+                        {
+                            "name": "/lxdx login [<码>]",
+                            "desc": "OAuth 授权登录 / 完成回调",
+                        },
+                    ],
+                },
+            )
             yield ev.image_result(url)
         else:
-            yield ev.plain_result("/lxdx help|bind <fc>|b50 [fc]|song <名称/ID>|login|callback <码>")
+            yield ev.plain_result(
+                "/lxdx help|bind <fc>|b50 [fc]|song <名称/ID>|login [<码>]"
+            )
 
     # --- /lxdx bind ---
 
     async def _bind(self, ev: AstrMessageEvent, args: list):
         """绑定好友码：/lxdx bind <friend_code>。API Key 模式会验证好友码有效性。"""
-        if not args: yield ev.plain_result("用法: /lxdx bind <friend_code>"); return
-        fc = args[0]; uid = ev.get_sender_id()
+        if not args:
+            yield ev.plain_result("用法: /lxdx bind <friend_code>")
+            return
+        fc = args[0]
+        uid = ev.get_sender_id()
         if not self._is_oauth:
-            try: await self._client.get_player_info(fc)
-            except Exception as e: yield ev.plain_result(f"绑定失败: {e}"); return
+            try:
+                await self._client.get_player_info(fc)
+            except Exception as e:
+                yield ev.plain_result(f"绑定失败: {e}")
+                return
         await self._st.kv_put(self._st.binding_key(uid), fc)
         yield ev.plain_result(f"已绑定好友码: {fc}")
 
@@ -187,25 +230,43 @@ class LxdxPlugin(Star):
         uid = ev.get_sender_id()
         if not self._is_oauth:
             fc = args[0] if args else await self._st.kv_get(self._st.binding_key(uid))
-            if not fc: yield ev.plain_result("请先 /lxdx bind <fc> 或 /lxdx b50 <fc>"); return
-            try: b50 = await self._client.get_b50(fc=fc)
-            except LxnsError as e: yield ev.plain_result(str(e)); return
+            if not fc:
+                yield ev.plain_result("请先 /lxdx bind <fc> 或 /lxdx b50 <fc>")
+                return
+            try:
+                b50 = await self._client.get_b50(fc=fc)
+            except LxnsError as e:
+                yield ev.plain_result(str(e))
+                return
         else:
             u = await self._restore_token(ev)
-            if not u: yield ev.plain_result("请先 /lxdx login 授权"); return
-            try: b50 = await self._client.get_b50(uid=u)
+            if not u:
+                yield ev.plain_result("请先 /lxdx login 授权")
+                return
+            try:
+                b50 = await self._client.get_b50(uid=u)
             except AuthExpiredError as e:
-                await self._st.kv_delete(self._st.token_key(u)); self._auth.remove_tokens(u)
-                yield ev.plain_result(str(e)); return
-            except LxnsError as e: yield ev.plain_result(str(e)); return
+                await self._st.kv_delete(self._st.token_key(u))
+                self._auth.remove_tokens(u)
+                yield ev.plain_result(str(e))
+                return
+            except LxnsError as e:
+                yield ev.plain_result(str(e))
+                return
 
         t = self._tmpl.get("b50")
         if t:
-            url = await self.html_render(t, {
-                "player_name": b50.player_name, "rating": b50.rating,
-                "friend_code": b50.friend_code, "class_rank": b50.class_rank,
-                "best": self._rec_rows(b50.best), "recent": self._rec_rows(b50.recent),
-            })
+            url = await self.html_render(
+                t,
+                {
+                    "player_name": b50.player_name,
+                    "rating": b50.rating,
+                    "friend_code": b50.friend_code,
+                    "class_rank": b50.class_rank,
+                    "best": self._rec_rows(b50.best),
+                    "recent": self._rec_rows(b50.recent),
+                },
+            )
             yield ev.image_result(url)
         else:
             yield ev.plain_result(self._b50_text(b50))
@@ -214,23 +275,40 @@ class LxdxPlugin(Star):
 
     async def _song(self, ev: AstrMessageEvent, args: list):
         """查询歌曲信息：/lxdx song <名称 或 ID>。多个匹配时返回列表。"""
-        if not args: yield ev.plain_result("用法: /lxdx song <名称 或 ID>"); return
-        q = " ".join(args); uid = ev.get_sender_id()
-        if self._is_oauth: uid = await self._restore_token(ev) or ""
+        if not args:
+            yield ev.plain_result("用法: /lxdx song <名称 或 ID>")
+            return
+        q = " ".join(args)
+        uid = ev.get_sender_id()
+        if self._is_oauth:
+            uid = await self._restore_token(ev) or ""
         res = await self._lookup(q, uid)
-        if not res: yield ev.plain_result(f"未找到: {q}"); return
+        if not res:
+            yield ev.plain_result(f"未找到: {q}")
+            return
         if len(res) > 1:
             ns = "\n".join(f"  · {s.title} (ID:{s.display_id})" for s in res[:10])
-            yield ev.plain_result(f"多个结果:\n{ns}"); return
+            yield ev.plain_result(f"多个结果:\n{ns}")
+            return
         s = res[0]
         t = self._tmpl.get("song_info")
         if t:
             jp = await self._am.download_jacket(s.id) or ""
-            url = await self.html_render(t, {
-                "song": {"title": s.title, "artist": s.artist, "genre": s.genre,
-                         "bpm": s.bpm, "display_id": s.display_id, "is_utage": s.is_utage},
-                "jacket_path": jp, "difficulties": self._diff_rows(s),
-            })
+            url = await self.html_render(
+                t,
+                {
+                    "song": {
+                        "title": s.title,
+                        "artist": s.artist,
+                        "genre": s.genre,
+                        "bpm": s.bpm,
+                        "display_id": s.display_id,
+                        "is_utage": s.is_utage,
+                    },
+                    "jacket_path": jp,
+                    "difficulties": self._diff_rows(s),
+                },
+            )
             yield ev.image_result(url)
         else:
             yield ev.plain_result(self._song_text(s))
@@ -238,69 +316,84 @@ class LxdxPlugin(Star):
     # --- /lxdx login ---
 
     async def _login(self, ev: AstrMessageEvent, args: list = None):
-        """OAuth(PKCE) 登录：生成 PKCE 参数，构建授权 URL 返回给用户。"""
+        """OAuth(PKCE) 登录：/lxdx login 启动授权流程，/lxdx login <授权码> 完成回调交换 Token。"""
         if not self._is_oauth:
-            yield ev.plain_result("API Key 模式无需 OAuth，直接 /lxdx bind <fc>"); return
-        pk = LxnsAuth.generate_pkce()
+            yield ev.plain_result("API Key 模式无需 OAuth，直接 /lxdx bind <fc>")
+            return
         uid = ev.get_sender_id()
-        self._pkce[uid] = {"verifier": pk.code_verifier}
-        url = self._auth.build_authorize_url(pk, self._ru, SCOPE)
-        yield ev.plain_result(f"请打开链接授权:\n{url}\n\n完成后用 /lxdx callback <授权码> 发送给我")
 
-    # --- /lxdx callback ---
-
-    async def _cb(self, ev: AstrMessageEvent, args: list):
-        """OAuth 回调：用授权码交换 Token，获取用户资料（主键）和玩家信息（好友码辅助）。"""
-        if not args: yield ev.plain_result("用法: /lxdx callback <授权码>"); return
-        code, uid = args[0], ev.get_sender_id()
-        pk = self._pkce.get(uid)
-        if not pk: yield ev.plain_result("未找到授权会话，请先 /lxdx login"); return
-        try:
-            tok = await self._client.exchange_code(code, pk["verifier"])
-            self._auth.store_tokens(uid, tok)
-            await self._st.kv_put(self._st.token_key(uid), asdict(tok))
-            del self._pkce[uid]
-
-            user_name = ""
+        if args:
+            code = args[0]
+            pk = self._pkce.get(uid)
+            if not pk:
+                yield ev.plain_result("未找到授权会话，请先 /lxdx login")
+                return
             try:
-                profile = await self._client.get_user_profile(uid)
-                user_name = profile.name
-            except Exception as e:
-                logger.warning(f"[lxdx] get_user_profile failed: {e}")
+                tok = await self._client.exchange_code(code, pk["verifier"])
+                self._auth.store_tokens(uid, tok)
+                await self._st.kv_put(self._st.token_key(uid), asdict(tok))
+                del self._pkce[uid]
 
-            fc_info = ""
-            try:
-                pi = await self._client.get_player_info(uid=uid)
-                await self._st.kv_put(self._st.binding_key(uid), pi.friend_code)
-                fc_info = f" 好友码:{pi.friend_code} Rating:{pi.rating}"
-            except Exception as e:
-                logger.warning(f"[lxdx] player info fetch failed: {e}")
-                fc_info = " (可稍后 /lxdx b50)"
+                user_name = ""
+                try:
+                    profile = await self._client.get_user_profile(uid)
+                    user_name = profile.name
+                except Exception as e:
+                    logger.warning(f"[lxdx] get_user_profile failed: {e}")
 
-            msg = f"授权成功！"
-            if user_name:
-                msg += f" 用户名: {user_name}"
-            msg += fc_info
-            yield ev.plain_result(msg)
-        except LxnsError as e:
-            self._pkce.pop(uid, None)
-            logger.error(f"[lxdx] callback failed: {e}")
-            yield ev.plain_result(f"授权失败: {e}")
-        except Exception as e:
-            self._pkce.pop(uid, None)
-            logger.error(f"[lxdx] callback error: {e}")
-            yield ev.plain_result("授权过程中发生未知错误")
+                fc_info = ""
+                try:
+                    pi = await self._client.get_player_info(uid=uid)
+                    await self._st.kv_put(self._st.binding_key(uid), pi.friend_code)
+                    fc_info = f" 好友码:{pi.friend_code} Rating:{pi.rating}"
+                except Exception as e:
+                    logger.warning(f"[lxdx] player info fetch failed: {e}")
+                    fc_info = " (可稍后 /lxdx b50)"
+
+                msg = "授权成功！"
+                if user_name:
+                    msg += f" 用户名: {user_name}"
+                msg += fc_info
+                yield ev.plain_result(msg)
+            except LxnsError as e:
+                self._pkce.pop(uid, None)
+                logger.error(f"[lxdx] login callback failed: {e}")
+                yield ev.plain_result(f"授权失败: {e}")
+            except Exception as e:
+                self._pkce.pop(uid, None)
+                logger.error(f"[lxdx] login callback error: {e}")
+                yield ev.plain_result("授权过程中发生未知错误")
+        else:
+            pk = LxnsAuth.generate_pkce()
+            self._pkce[uid] = {"verifier": pk.code_verifier}
+            url = self._auth.build_authorize_url(pk, self._ru, SCOPE)
+            yield ev.plain_result(
+                f"请打开链接授权:\n{url}\n\n完成后用 /lxdx login <授权码> 发送给我"
+            )
 
     # --- helpers ---
 
     @staticmethod
     def _rec_rows(recs: list) -> list:
         """将 PlayerRecord 列表转为模板渲染所需的 dict 列表，包含难度简称、达成率、评级等。"""
-        return [{"title": r.title,
-                 "difficulty_short": DIFFICULTY_SHORT[r.level_index] if r.level_index < 5 else "?",
-                 "difficulty_css": DIFFICULTY_NAMES[r.level_index].lower().replace(":", "") if r.level_index < 5 else "",
-                 "achievement_pct": r.achievement_pct, "dx_score": r.dx_score,
-                 "level_value": r.level_value, "rank": r.rank_display} for r in recs]
+        return [
+            {
+                "title": r.title,
+                "difficulty_short": DIFFICULTY_SHORT[r.level_index]
+                if r.level_index < 5
+                else "?",
+                "difficulty_css": DIFFICULTY_NAMES[r.level_index]
+                .lower()
+                .replace(":", "")
+                if r.level_index < 5
+                else "",
+                "achievement_pct": r.achievement_pct,
+                "dx_score": r.dx_score,
+                "level_value": r.level_value,
+                "rank": r.rank_display,
+            }
+            for r in recs
+        ]
 
     @staticmethod
     def _diff_rows(song):
@@ -310,9 +403,17 @@ class LxdxPlugin(Star):
             lv = song.levels[i] if i < len(song.levels) else 0
             df = song.difficulties[i] if i < len(song.difficulties) else 0.0
             nt = song.notes[i] if i < len(song.notes) else None
-            if lv == 0 and not nt: continue
-            rows.append({"name": n, "css_class": n.lower().replace(":", ""), "level": lv,
-                          "difficulty": df if df > 0 else None, "notes": nt})
+            if lv == 0 and not nt:
+                continue
+            rows.append(
+                {
+                    "name": n,
+                    "css_class": n.lower().replace(":", ""),
+                    "level": lv,
+                    "difficulty": df if df > 0 else None,
+                    "notes": nt,
+                }
+            )
         return rows
 
     @staticmethod
@@ -331,12 +432,19 @@ class LxdxPlugin(Star):
     @staticmethod
     def _song_text(song) -> str:
         """纯文本格式的歌曲详情输出（无 HTML 模板时的回退方案）。"""
-        ls = [f"{song.title}  [{song.genre}]",
-              f"艺术家:{song.artist}  BPM:{song.bpm}  ID:{song.display_id}" + (" (宴)" if song.is_utage else ""),
-              "", "难度        等级  定数"]
+        ls = [
+            f"{song.title}  [{song.genre}]",
+            f"艺术家:{song.artist}  BPM:{song.bpm}  ID:{song.display_id}"
+            + (" (宴)" if song.is_utage else ""),
+            "",
+            "难度        等级  定数",
+        ]
         for i, n in enumerate(DIFFICULTY_NAMES):
             lv = song.levels[i] if i < len(song.levels) else 0
             df = song.difficulties[i] if i < len(song.difficulties) else 0.0
-            if lv == 0: continue
-            ls.append(f"  {n:<8} {lv:>4}  {df:.1f}" if df > 0 else f"  {n:<8} {lv:>4}  -")
+            if lv == 0:
+                continue
+            ls.append(
+                f"  {n:<8} {lv:>4}  {df:.1f}" if df > 0 else f"  {n:<8} {lv:>4}  -"
+            )
         return "\n".join(ls)
