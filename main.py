@@ -176,52 +176,83 @@ class LxdxPlugin(Star):
 
     # --- command router ---
 
-    @filter.command("lxdx")
-    async def lxdx(self, ev: AstrMessageEvent):
-        """主命令入口：/lxdx <help|bind|b50|song|login> [...]"""
-        ps = ev.message_str.strip().split()
-        if len(ps) < 2:
-            async for r in self._help(ev):
-                yield r
-            return
-        sub, args = ps[1].lower(), ps[2:]
-        h = {
-            "help": self._help,
-            "bind": self._bind,
-            "b50": self._b50,
-            "song": self._song,
-            "login": self._login,
-        }
-        fn = h.get(sub)
-        if fn is None:
-            yield ev.plain_result(f"未知指令: {sub}，使用 /lxdx help 查看帮助")
-        else:
-            async for r in fn(ev, args):
-                yield r
+    @staticmethod
+    def _args(ev: AstrMessageEvent, n: int) -> list:
+        return ev.message_str.strip().split()[n:]
 
-    @filter.command("lxchu")
-    async def lxchu(self, ev: AstrMessageEvent):
-        """中二节奏命令入口：/lxchu <help|bind|bests|song|recent|login> [...]"""
-        ps = ev.message_str.strip().split()
-        if len(ps) < 2:
-            async for r in self._chu_help(ev):
-                yield r
-            return
-        sub, args = ps[1].lower(), ps[2:]
-        h = {
-            "help": self._chu_help,
-            "bind": self._chu_bind,
-            "bests": self._chu_bests,
-            "song": self._chu_song,
-            "recent": self._chu_recent,
-            "login": self._chu_login,
-        }
-        fn = h.get(sub)
-        if fn is None:
-            yield ev.plain_result(f"未知指令: {sub}，使用 /lxchu help 查看帮助")
-        else:
-            async for r in fn(ev, args):
-                yield r
+    @filter.command_group("lxdx")
+    def lxdx_group(self):
+        """落雪DX舞萌指令组"""
+        pass
+
+    @lxdx_group.command("help")
+    async def lxdx_help(self, event: AstrMessageEvent):
+        async for r in self._help(event):
+            yield r
+
+    @lxdx_group.command("bind")
+    async def lxdx_bind(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._bind(event, args):
+            yield r
+
+    @lxdx_group.command("b50")
+    async def lxdx_b50(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._b50(event, args):
+            yield r
+
+    @lxdx_group.command("song")
+    async def lxdx_song(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._song(event, args):
+            yield r
+
+    @lxdx_group.command("login")
+    async def lxdx_login(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._login(event, args):
+            yield r
+
+    @filter.command_group("lxchu")
+    def lxchu_group(self):
+        """落雪DX中二节奏指令组"""
+        pass
+
+    @lxchu_group.command("help")
+    async def lxchu_help(self, event: AstrMessageEvent):
+        async for r in self._chu_help(event):
+            yield r
+
+    @lxchu_group.command("bind")
+    async def lxchu_bind(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._chu_bind(event, args):
+            yield r
+
+    @lxchu_group.command("bests")
+    async def lxchu_bests(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._chu_bests(event, args):
+            yield r
+
+    @lxchu_group.command("recent")
+    async def lxchu_recent(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._chu_recent(event, args):
+            yield r
+
+    @lxchu_group.command("song")
+    async def lxchu_song(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._chu_song(event, args):
+            yield r
+
+    @lxchu_group.command("login")
+    async def lxchu_login(self, event: AstrMessageEvent):
+        args = self._args(event, 2)
+        async for r in self._chu_login(event, args):
+            yield r
 
     # --- /lxdx help ---
 
