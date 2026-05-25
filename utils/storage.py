@@ -40,5 +40,8 @@ class StorageManager:
     def binding_key(self, uid: str) -> str:
         return f"binding:{uid}"
 
+    def chu_binding_key(self, uid: str) -> str:
+        return f"chubind:{uid}"
+
     def token_key(self, uid: str) -> str:
         return f"token:{uid}"

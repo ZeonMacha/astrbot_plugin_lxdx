@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #eee; padding: 20px 24px; min-width: 780px; max-width: 880px;
+  }
+  .player-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 12px; margin-bottom: 12px; border-bottom: 2px solid #f6ba31;
+  }
+  .player-name { font-size: 22px; font-weight: bold; color: #f6ba31; }
+  .player-rating { font-size: 18px; color: #9a69e7; }
+  .player-code { font-size: 11px; color: #888; }
+  .section-header {
+    font-size: 15px; color: #f35871; margin: 14px 0 8px;
+    padding-bottom: 4px; border-bottom: 1px solid #333;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #2a2a3e; }
+  th { color: #999; font-weight: normal; font-size: 11px; position: sticky; top: 0; background: #1a1a2e; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .idx { color: #666; text-align: center; width: 24px; }
+  .title { max-width: 200px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .diff { text-align: center; }
+  .basic { color: #22bb5b; } .advanced { color: #f6ba31; } .expert { color: #f35871; }
+  .master { color: #9a69e7; } .ultima { color: #ba67f9; } .worlds-end { color: #e040fb; }
+  .score-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rating { text-align: right; font-variant-numeric: tabular-nums; }
+  .rank { text-align: center; font-weight: bold; font-size: 11px; }
+  .status-col { text-align: center; font-size: 10px; max-width: 80px; }
+  .clear-tag { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 9px; }
+  .clr-hard { background: #f6ba31; color: #1a1a2e; } .clr-clear { background: #22bb5b; color: #1a1a2e; }
+  .clr-absolute { background: #f35871; color: #eee; } .clr-catastrophy { background: #9a69e7; color: #eee; }
+  .clr-brave { background: #ff6b9d; color: #eee; }
+  .fc-tag { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-left: 2px; }
+  .fc-ajc { background: #ffd700; color: #1a1a2e; } .fc-aj { background: #ff8c00; color: #eee; }
+  .fc-fc { background: #22bb5b; color: #eee; }
+  .rank-sssp { color: #ff6b9d; } .rank-sss { color: #ff8c00; }
+  .rank-ss { color: #ffa500; } .rank-s { color: #f6ba31; }
+  .rank-aaa { color: #22bb5b; } .rank-a { color: #999; }
+  .footer { text-align: center; font-size: 10px; color: #555; margin-top: 16px; padding-top: 10px; border-top: 1px solid #333; }
+  .empty-row td { text-align: center; color: #555; padding: 16px; }
+</style>
+</head>
+<body>
+  <div class="player-header">
+    <div>
+      <div class="player-name">{{ player_name }}</div>
+      <div class="player-code">{% if friend_code %}{{ friend_code }}{% endif %}</div>
+    </div>
+    <div class="player-rating">Rating: {{ "%.2f" | format(rating) }}</div>
+  </div>
+
+  <div class="section-header">Best 30 · {{ bests|length }} 首</div>
+  <table>
+    <thead><tr>
+      <th class="idx">#</th><th>曲目</th><th class="diff">难度</th>
+      <th class="score-num">分数</th><th class="rating">Rating</th><th class="rank">评级</th><th class="status-col">状态</th>
+    </tr></thead>
+    <tbody>
+      {% if bests|length == 0 %}
+      <tr><td colspan="7" class="empty-row">暂无数据</td></tr>
+      {% endif %}
+      {% for rec in bests %}
+      <tr>
+        <td class="idx">{{ loop.index }}</td>
+        <td class="title" title="{{ rec.song_name }}">{{ rec.song_name }}</td>
+        <td class="diff {{ rec.difficulty_css }}">{{ rec.difficulty_short }} {{ rec.level }}</td>
+        <td class="score-num">{{ rec.score }}</td>
+        <td class="rating">{{ "%.2f" | format(rec.rating) }}</td>
+        <td class="rank rank-{{ rec.rank }}">{{ rec.rank_display }}</td>
+        <td class="status-col">
+          <span class="clear-tag clr-{{ rec.clear }}">{{ rec.clear_display }}</span>
+          {% if rec.fc_display %}<span class="fc-tag fc-{{ rec.full_combo }}">{{ rec.fc_display }}</span>{% endif %}
+          {% if rec.full_chain %}<span class="fc-tag">FC</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="section-header">Selection 10 · {{ selections|length }} 首</div>
+  <table>
+    <thead><tr>
+      <th class="idx">#</th><th>曲目</th><th class="diff">难度</th>
+      <th class="score-num">分数</th><th class="rating">Rating</th><th class="rank">评级</th><th class="status-col">状态</th>
+    </tr></thead>
+    <tbody>
+      {% if selections|length == 0 %}
+      <tr><td colspan="7" class="empty-row">暂无数据</td></tr>
+      {% endif %}
+      {% for rec in selections %}
+      <tr>
+        <td class="idx">{{ loop.index }}</td>
+        <td class="title" title="{{ rec.song_name }}">{{ rec.song_name }}</td>
+        <td class="diff {{ rec.difficulty_css }}">{{ rec.difficulty_short }} {{ rec.level }}</td>
+        <td class="score-num">{{ rec.score }}</td>
+        <td class="rating">{{ "%.2f" | format(rec.rating) }}</td>
+        <td class="rank rank-{{ rec.rank }}">{{ rec.rank_display }}</td>
+        <td class="status-col">
+          <span class="clear-tag clr-{{ rec.clear }}">{{ rec.clear_display }}</span>
+          {% if rec.fc_display %}<span class="fc-tag fc-{{ rec.full_combo }}">{{ rec.fc_display }}</span>{% endif %}
+          {% if rec.full_chain %}<span class="fc-tag">FC</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="section-header">New 20 (新曲) · {{ new_bests|length }} 首</div>
+  <table>
+    <thead><tr>
+      <th class="idx">#</th><th>曲目</th><th class="diff">难度</th>
+      <th class="score-num">分数</th><th class="rating">Rating</th><th class="rank">评级</th><th class="status-col">状态</th>
+    </tr></thead>
+    <tbody>
+      {% if new_bests|length == 0 %}
+      <tr><td colspan="7" class="empty-row">暂无数据</td></tr>
+      {% endif %}
+      {% for rec in new_bests %}
+      <tr>
+        <td class="idx">{{ loop.index }}</td>
+        <td class="title" title="{{ rec.song_name }}">{{ rec.song_name }}</td>
+        <td class="diff {{ rec.difficulty_css }}">{{ rec.difficulty_short }} {{ rec.level }}</td>
+        <td class="score-num">{{ rec.score }}</td>
+        <td class="rating">{{ "%.2f" | format(rec.rating) }}</td>
+        <td class="rank rank-{{ rec.rank }}">{{ rec.rank_display }}</td>
+        <td class="status-col">
+          <span class="clear-tag clr-{{ rec.clear }}">{{ rec.clear_display }}</span>
+          {% if rec.fc_display %}<span class="fc-tag fc-{{ rec.full_combo }}">{{ rec.fc_display }}</span>{% endif %}
+          {% if rec.full_chain %}<span class="fc-tag">FC</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
+</body>
+</html>

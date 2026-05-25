@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #eee;
+        padding: 30px;
+        min-width: 520px;
+        max-width: 620px;
+      }
+      .header { text-align: center; margin-bottom: 20px; }
+      .header h1 {
+        font-size: 28px;
+        background: linear-gradient(90deg, #f6ba31, #f35871, #9a69e7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .header p { font-size: 13px; color: #999; margin-top: 4px; }
+      .section { margin-bottom: 16px; }
+      .section-title {
+        font-size: 14px; color: #f6ba31; border-bottom: 1px solid #333;
+        padding-bottom: 4px; margin-bottom: 8px;
+      }
+      .cmd { display: flex; align-items: baseline; padding: 6px 0; }
+      .cmd-name {
+        font-family: "Fira Code", "Consolas", monospace;
+        color: #9a69e7; font-size: 14px; min-width: 180px;
+      }
+      .cmd-desc { font-size: 13px; color: #bbb; }
+      .footer {
+        text-align: center; font-size: 11px; color: #666;
+        margin-top: 16px; border-top: 1px solid #333; padding-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>{{ plugin_display_name }}</h1>
+      <p>v{{ plugin_version }} · 中二节奏查分插件</p>
+    </div>
+    <div class="section">
+      <div class="section-title">指令列表</div>
+      {% for cmd in commands %}
+      <div class="cmd">
+        <div class="cmd-name">{{ cmd.name }}</div>
+        <div class="cmd-desc">{{ cmd.desc }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="section">
+      <div class="section-title">授权模式</div>
+      <div class="cmd">
+        <div class="cmd-name">{% if auth_mode != "api_key" %}OAuth(PKCE) 授权{% else %}开发者 API Key{% endif %}</div>
+        <div class="cmd-desc">{{ auth_desc }}</div>
+      </div>
+    </div>
+    <div class="footer">
+      数据来源：落雪查分器 (maimai.lxns.net) · Powered by {{ plugin_display_name }}
+    </div>
+  </body>
+</html>

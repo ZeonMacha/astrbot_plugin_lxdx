@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #eee; padding: 24px; min-width: 500px; max-width: 580px;
+  }
+  .song-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+    padding-bottom: 14px; border-bottom: 2px solid #f6ba31;
+  }
+  .jacket {
+    width: 80px; height: 80px; border-radius: 8px; border: 2px solid #444;
+    object-fit: cover; background: #2a2a3e;
+    {% if jacket_path %}background-image: url('file://{{ jacket_path }}'); background-size: cover;{% endif %}
+  }
+  .song-meta { flex: 1; }
+  .song-title { font-size: 20px; font-weight: bold; color: #f6ba31; }
+  .song-artist { font-size: 13px; color: #bbb; }
+  .song-info-row { font-size: 12px; color: #888; margin-top: 4px; }
+  .song-info-row span { margin-right: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+  th, td { padding: 7px 10px; text-align: center; border-bottom: 1px solid #2a2a3e; }
+  th { color: #888; font-weight: normal; font-size: 11px; background: rgba(255,255,255,0.03); }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .diff-basic { color: #22bb5b; font-weight: bold; }
+  .diff-advanced { color: #f6ba31; font-weight: bold; }
+  .diff-expert { color: #f35871; font-weight: bold; }
+  .diff-master { color: #9a69e7; font-weight: bold; }
+  .diff-ultima { color: #ba67f9; font-weight: bold; }
+  .diff-worlds-end { color: #e040fb; font-weight: bold; }
+  .level-value { font-variant-numeric: tabular-nums; }
+  .notes-row { font-size: 11px; color: #999; }
+  .notes-row span { margin: 0 3px; }
+  .note-tap { color: #22bb5b; }
+  .note-hold { color: #f6ba31; }
+  .note-slide { color: #9a69e7; }
+  .note-air { color: #f35871; }
+  .note-flick { color: #ba67f9; }
+  .footer { text-align: center; font-size: 10px; color: #555; margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; }
+</style>
+</head>
+<body>
+  <div class="song-header">
+    <div class="jacket"></div>
+    <div class="song-meta">
+      <div class="song-title">{{ song.title }}</div>
+      <div class="song-artist">{{ song.artist }}</div>
+      <div class="song-info-row">
+        <span>{{ song.genre }}</span>
+        <span>BPM {{ song.bpm }}</span>
+        <span>ID {{ song.id }}</span>
+        {% if song.map %}<span>{{ song.map }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>难度</th>
+        <th>等级</th>
+        <th>定数</th>
+        <th>谱师</th>
+        <th>谱面</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for diff in difficulties %}
+      <tr>
+        <td class="diff-{{ diff.css_class }}">{{ diff.name }}</td>
+        <td class="diff-{{ diff.css_class }} level-value">{{ diff.level }}</td>
+        <td class="level-value">
+          {% if diff.level_value > 0 %}{{ "%.1f" | format(diff.level_value) }}{% else %}-{% endif %}
+        </td>
+        <td style="font-size: 11px; color: #999;">{{ diff.note_designer or "-" }}</td>
+        <td class="notes-row">
+          {% if diff.notes %}
+            <span class="note-tap" title="TAP">{{ diff.notes.tap }}</span>
+            <span class="note-hold" title="HOLD">{{ diff.notes.hold }}</span>
+            <span class="note-slide" title="SLIDE">{{ diff.notes.slide }}</span>
+            <span class="note-air" title="AIR">{{ diff.notes.air }}</span>
+            <span class="note-flick" title="FLICK">{{ diff.notes.flick }}</span>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
+</body>
+</html>

@@ -47,9 +47,16 @@ class AssetManager:
         }
 
     async def download_jacket(self, song_id: int) -> str:
-        """下载指定歌曲 ID 的封面图。"""
+        """下载指定歌曲 ID 的封面图（舞萌 DX）。"""
         return await self.download(
             f"{self.CDN}/api/v0/maimai/asset/jacket/{song_id}", f"jacket_{song_id}.png"
+        )
+
+    async def download_chunithm_jacket(self, song_id: int) -> str:
+        """下载指定歌曲 ID 的封面图（中二节奏）。"""
+        return await self.download(
+            f"https://assets2.lxns.net/chunithm/jacket/{song_id}.png",
+            f"chu_jacket_{song_id}.png",
         )
 
     async def download_jackets_batch(self, song_ids: list[int]) -> dict[int, str]:

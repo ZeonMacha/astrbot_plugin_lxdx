@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass, field
 from typing import Optional
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 
 class DifficultyIndex(IntEnum):
@@ -200,3 +200,263 @@ class AuthRequiredError(LxnsError):
 
 class ApiRequestError(LxnsError):
     """API 请求失败（网络/服务端错误）。"""
+
+
+# ============================================================
+# Chunithm (中二节奏) 枚举与常量
+# ============================================================
+
+
+class ChuLevelIndex(IntEnum):
+    BASIC = 0
+    ADVANCED = 1
+    EXPERT = 2
+    MASTER = 3
+    ULTIMA = 4
+    WORLDS_END = 5
+
+
+CHU_DIFFICULTY_NAMES = [
+    "BASIC",
+    "ADVANCED",
+    "EXPERT",
+    "MASTER",
+    "ULTIMA",
+    "WORLD'S END",
+]
+CHU_DIFFICULTY_COLORS = {
+    "BASIC": "#22bb5b",
+    "ADVANCED": "#f6ba31",
+    "EXPERT": "#f35871",
+    "MASTER": "#9a69e7",
+    "ULTIMA": "#ba67f9",
+    "WORLD'S END": "#e040fb",
+}
+CHU_DIFFICULTY_SHORT = ["Bas", "Adv", "Exp", "Mas", "Ult", "WE"]
+
+
+class ChuClearType(StrEnum):
+    CATASTROPHY = "catastrophy"
+    ABSOLUTE = "absolute"
+    BRAVE = "brave"
+    HARD = "hard"
+    CLEAR = "clear"
+    FAILED = "failed"
+
+
+class ChuFullComboType(StrEnum):
+    AJC = "alljusticecritical"
+    ALL_JUSTICE = "alljustice"
+    FULL_COMBO = "fullcombo"
+
+
+class ChuFullChainType(StrEnum):
+    FULL_CHAIN = "fullchain"
+    FULL_CHAIN2 = "fullchain2"
+
+
+class ChuRankType(StrEnum):
+    SSSP = "sssp"
+    SSS = "sss"
+    SSP = "ssp"
+    SS = "ss"
+    SP = "sp"
+    S = "s"
+    AAA = "aaa"
+    AA = "aa"
+    A = "a"
+    BBB = "bbb"
+    BB = "bb"
+    B = "b"
+    C = "c"
+    D = "d"
+
+
+_CHU_RANK_ORDER = {
+    ChuRankType.SSSP: 0,
+    ChuRankType.SSS: 1,
+    ChuRankType.SSP: 2,
+    ChuRankType.SS: 3,
+    ChuRankType.SP: 4,
+    ChuRankType.S: 5,
+    ChuRankType.AAA: 6,
+    ChuRankType.AA: 7,
+    ChuRankType.A: 8,
+    ChuRankType.BBB: 9,
+    ChuRankType.BB: 10,
+    ChuRankType.B: 11,
+    ChuRankType.C: 12,
+    ChuRankType.D: 13,
+}
+
+_CHU_CLEAR_DISPLAY = {
+    "catastrophy": "CATASTROPHY",
+    "absolute": "ABSOLUTE",
+    "brave": "BRAVE",
+    "hard": "HARD",
+    "clear": "CLEAR",
+    "failed": "FAILED",
+}
+
+_CHU_FC_DISPLAY = {
+    "alljusticecritical": "AJC",
+    "alljustice": "ALL JUSTICE",
+    "fullcombo": "FULL COMBO",
+}
+
+
+# ============================================================
+# Chunithm (中二节奏) 数据模型
+# ============================================================
+
+
+@dataclass
+class ChuNotes:
+    total: int = 0
+    tap: int = 0
+    hold: int = 0
+    slide: int = 0
+    air: int = 0
+    flick: int = 0
+
+
+@dataclass
+class ChuSongDifficulty:
+    difficulty: int = 0
+    level: str = ""
+    level_value: float = 0.0
+    note_designer: str = ""
+    version: int = 0
+    notes: Optional[ChuNotes] = None
+    origin_id: int = 0
+    kanji: str = ""
+    star: int = 0
+
+
+@dataclass
+class ChuSongInfo:
+    id: int
+    title: str
+    artist: str
+    genre: str
+    bpm: int
+    version: int
+    difficulties: list[ChuSongDifficulty] = field(default_factory=list)
+    map: str = ""
+    rights: str = ""
+    locked: bool = False
+    disabled: bool = False
+
+
+@dataclass
+class ChuScore:
+    id: int
+    score: int
+    rating: float = 0.0
+    over_power: float = 0.0
+    level_index: int = 0
+    song_name: str = ""
+    level: str = ""
+    clear: str = ""
+    full_combo: str = ""
+    full_chain: str = ""
+    rank: str = ""
+    play_time: Optional[str] = None
+    upload_time: Optional[str] = None
+    last_played_time: Optional[str] = None
+
+    @property
+    def clear_display(self) -> str:
+        return _CHU_CLEAR_DISPLAY.get(
+            self.clear, self.clear.upper() if self.clear else ""
+        )
+
+    @property
+    def fc_display(self) -> str:
+        return _CHU_FC_DISPLAY.get(
+            self.full_combo, self.full_combo.upper() if self.full_combo else ""
+        )
+
+    @property
+    def rank_display(self) -> str:
+        m = {
+            "sssp": "SSS+",
+            "sss": "SSS",
+            "ssp": "SS+",
+            "ss": "SS",
+            "sp": "S+",
+            "s": "S",
+            "aaa": "AAA",
+            "aa": "AA",
+            "a": "A",
+            "bbb": "BBB",
+            "bb": "BB",
+            "b": "B",
+            "c": "C",
+            "d": "D",
+        }
+        return m.get(self.rank, self.rank.upper() if self.rank else "")
+
+
+@dataclass
+class ChuPlayerBests:
+    bests: list[ChuScore] = field(default_factory=list)
+    selections: list[ChuScore] = field(default_factory=list)
+    new_bests: list[ChuScore] = field(default_factory=list)
+
+
+@dataclass
+class ChuPlayerInfo:
+    name: str = ""
+    level: int = 0
+    rating: float = 0.0
+    rating_possession: str = ""
+    friend_code: int = 0
+    class_emblem: dict = field(default_factory=lambda: {"base": 0, "medal": 0})
+    reborn_count: int = 0
+    over_power: float = 0.0
+    over_power_progress: float = 0.0
+    currency: int = 0
+    total_currency: int = 0
+    total_play_count: int = 0
+    trophy: Optional[dict] = None
+    character: Optional[dict] = None
+    name_plate: Optional[dict] = None
+    map_icon: Optional[dict] = None
+    upload_time: Optional[str] = None
+
+
+@dataclass
+class ChuGenre:
+    id: int = 0
+    genre: str = ""
+
+
+@dataclass
+class ChuVersion:
+    id: int = 0
+    title: str = ""
+    version: int = 0
+
+
+@dataclass
+class ChuSongListResult:
+    songs: list[ChuSongInfo] = field(default_factory=list)
+    genres: list[ChuGenre] = field(default_factory=list)
+    versions: list[ChuVersion] = field(default_factory=list)
+
+
+@dataclass
+class ChuAlias:
+    song_id: int = 0
+    aliases: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ChuRatingTrend:
+    rating: float = 0.0
+    bests_rating: float = 0.0
+    selections_rating: float = 0.0
+    recents_rating: float = 0.0
+    new_bests_rating: float = 0.0
+    date: str = ""
