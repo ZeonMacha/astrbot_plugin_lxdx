@@ -96,6 +96,7 @@ class LxdxPlugin(Star):
         logger.info(f"[lxdx] init done, mode={mode_label}")
 
     async def terminate(self):
+        await self._st.kv_clear_all()
         await self._client.close()
         await self._chu_client.close()
         logger.info("[lxdx] terminated")

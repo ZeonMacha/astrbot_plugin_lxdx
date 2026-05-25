@@ -17,6 +17,7 @@ class StorageManager:
 
     def __init__(self, plugin: Star, data_dir: str):
         self._plugin = plugin
+        self._keys: set[str] = set()
         self.assets_dir = f"{data_dir}/plugin_data/astrbot_plugin_lxdx/assets"
         self.cache_dir = f"{data_dir}/plugin_data/astrbot_plugin_lxdx/cache"
 
@@ -26,6 +27,7 @@ class StorageManager:
         os.makedirs(self.cache_dir, exist_ok=True)
 
     async def kv_put(self, key: str, value: Any) -> None:
+        self._keys.add(key)
         await self._plugin.put_kv_data(key, value)
 
     async def kv_get(self, key: str) -> Any:
@@ -36,6 +38,11 @@ class StorageManager:
 
     async def kv_delete(self, key: str) -> None:
         await self._plugin.delete_kv_data(key)
+
+    async def kv_clear_all(self) -> None:
+        for key in self._keys:
+            await self._plugin.delete_kv_data(key)
+        self._keys.clear()
 
     def binding_key(self, uid: str) -> str:
         return f"binding:{uid}"
