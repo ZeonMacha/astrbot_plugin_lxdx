@@ -69,7 +69,7 @@ class ChunithmClient:
 
     async def _auth_headers(self, uid: str = "") -> dict:
         if self._is_api_key_mode:
-            return {"X-API-Key": self._api_key}
+            return {"Authorization": self._api_key}
         t = self._auth.get_tokens(uid)
         if not t:
             raise AuthRequiredError("未登录，请使用 /lxchu login 进行 OAuth 授权")

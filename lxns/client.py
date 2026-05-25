@@ -160,9 +160,9 @@ class LxnsClient:
         raise LxnsError("连接落雪服务器失败")
 
     async def _auth_headers(self, uid: str = "") -> dict:
-        """构建认证请求头。API Key 模式返回 X-API-Key；OAuth 模式返回 Bearer Token，过期时自动刷新。"""
+        """构建认证请求头。API Key 模式返回 Authorization；OAuth 模式返回 Bearer Token，过期时自动刷新。"""
         if self._api_key:
-            return {"X-API-Key": self._api_key}
+            return {"Authorization": self._api_key}
         t = self._auth.get_tokens(uid)
         if not t:
             raise AuthRequiredError("未登录，请使用 /lxdx login 进行 OAuth 授权")
