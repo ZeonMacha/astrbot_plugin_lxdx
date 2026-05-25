@@ -211,3 +211,7 @@ __marimo__/
 
 # plugin
 .kilo/
+
+# pack stuff, no need to include
+pack.sh
+astrbot_plugin_lxdx.zip

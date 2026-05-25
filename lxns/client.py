@@ -1,9 +1,11 @@
 """LXNS API 客户端：Token 管理、HTTP 请求、自动重试、数据解析。httpx 懒加载。"""
 
+from typing import Optional, Callable, Awaitable
+
 from .auth import LxnsAuth
 from .models import (
     PlayerB50, PlayerRecord, PlayerInfo, SongInfo, SongRecord, TokenInfo,
-    LxnsError, AuthExpiredError, AuthRequiredError, ApiRequestError,
+    UserProfile, LxnsError, AuthExpiredError, AuthRequiredError, ApiRequestError,
 )
 
 BASE_URL = "https://maimai.lxns.net"
@@ -19,11 +21,14 @@ class LxnsClient:
     """
     MAX_RETRIES = 2
 
-    def __init__(self, auth: LxnsAuth, redirect_uri: str = "", api_key: str = ""):
-        """auth: PKCE 授权管理实例；redirect_uri: OAuth 回调地址；api_key: 开发者 Key（可选）。"""
+    def __init__(self, auth: LxnsAuth, redirect_uri: str = "", api_key: str = "",
+                 on_token_refresh: Optional[Callable[[str, TokenInfo], Awaitable[None]]] = None):
+        """auth: PKCE 授权管理实例；redirect_uri: OAuth 回调地址；api_key: 开发者 Key（可选）；
+        on_token_refresh: Token 刷新时将新 Token 持久化到 KV 的回调（uid, TokenInfo）→ awaitable。"""
         self._auth = auth
         self._redirect_uri = redirect_uri
         self._api_key = api_key
+        self._on_token_refresh = on_token_refresh
 
     @staticmethod
     def _get_httpx():
@@ -121,6 +126,8 @@ class LxnsClient:
             try:
                 t = await self.refresh_token(t.refresh_token, uid)
                 self._auth.store_tokens(uid, t)
+                if callable(self._on_token_refresh):
+                    await self._on_token_refresh(uid, t)
             except AuthExpiredError: raise
             except LxnsError as e: raise AuthExpiredError(f"令牌刷新失败: {e}") from e
         return {"Authorization": f"Bearer {t.access_token}"}
@@ -170,6 +177,17 @@ class LxnsClient:
         elif self._api_key: raise ApiRequestError("开发者 API 模式需要提供 friend_code")
         else: u = f"{b}/player/bests"
         return self._parse_b50(await self._api_get(u, uid))
+
+    async def get_user_profile(self, uid: str = "") -> UserProfile:
+        """获取 LXNS 用户资料（OAuth 模式下的用户主键）。调用 GET /api/v0/user/profile。"""
+        d = await self._api_get(f"{BASE_URL}/api/v0/user/profile", uid)
+        inner = d.get("data", d)
+        return UserProfile(
+            id=inner.get("id", 0),
+            name=inner.get("name", ""),
+            email=inner.get("email", ""),
+            avatar=inner.get("avatar", ""),
+        )
 
     async def get_song_records(self, sid: int, uid: str = "") -> SongRecord:
         """获取指定歌曲的游玩记录（当前未使用）。"""

@@ -121,6 +121,15 @@ class TokenInfo:
 
 
 @dataclass
+class UserProfile:
+    """LXNS 用户资料（通过 /api/v0/user/profile 获取）。id 作为 OAuth 模式下的用户主键。"""
+    id: int
+    name: str
+    email: str = ""
+    avatar: str = ""
+
+
+@dataclass
 class PlayerInfo:
     """玩家基本信息。"""
     name: str

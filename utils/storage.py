@@ -39,4 +39,3 @@ class StorageManager:
 
     def binding_key(self, uid: str) -> str: return f"binding:{uid}"
     def token_key(self, uid: str) -> str:    return f"token:{uid}"
-    def pkce_key(self, uid: str) -> str:     return f"pkce:{uid}"

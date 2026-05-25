@@ -42,8 +42,10 @@ class LxdxPlugin(Star):
         self._ru = c.get("redirect_uri", "")
         self._method = c.get("method", "OAuth")    # 配置中的授权模式选择
         self._api_key = c.get("api_key", "")
-        self._client = LxnsClient(self._auth, redirect_uri=self._ru, api_key=self._api_key)
+        self._client = LxnsClient(self._auth, redirect_uri=self._ru, api_key=self._api_key,
+                                  on_token_refresh=self._persist_token)
 
+        self._pkce: dict[str, dict] = {}        # 内存 PKCE 参数 (uid → {verifier})
         self._tmpl: dict[str, str] = {}         # 内存中缓存的 HTML 模板
         self._tdir = Path(__file__).parent / "templates"
 
@@ -64,7 +66,8 @@ class LxdxPlugin(Star):
             logger.info(f"[lxdx] loaded {self._sdb.song_count} songs from cache")
         else:
             logger.info("[lxdx] no song cache, will fetch on first use")
-        logger.info(f"[lxdx] init done, mode={self._mode()}")
+        mode_label = "OAuth(PKCE)" if self._is_oauth else "api_key"
+        logger.info(f"[lxdx] init done, mode={mode_label}")
 
     async def terminate(self):
         """AstrBot 插件生命周期：清理资源。"""
@@ -77,22 +80,29 @@ class LxdxPlugin(Star):
             p = self._tdir / f"{n}.html"
             if p.exists(): self._tmpl[n] = p.read_text("utf-8")
 
-    def _mode(self):
-        """判断当前认证模式：api_key 或 OAuth。受 method 配置和 api_key 填写情况共同影响。"""
-        return self._method if self._method == "api_key" and self._api_key else "OAuth"
+    @property
+    def _is_oauth(self) -> bool:
+        return self._method != "api_key"
 
     # --- auth helpers ---
+
+    async def _persist_token(self, uid: str, token: TokenInfo) -> None:
+        """Token 刷新回调：将新 Token 持久化到 KV。"""
+        await self._st.kv_put(self._st.token_key(uid), asdict(token))
 
     async def _restore_token(self, ev: AstrMessageEvent) -> str:
         """从 KV 恢复用户 OAuth Token 到内存缓存（LxnsAuth）。成功返回 uid，失败返回空字符串。"""
         uid = ev.get_sender_id()
         td = await self._st.kv_get(self._st.token_key(uid))
-        if not td: return ""
+        if not td or not isinstance(td, dict):
+            return ""
         try:
-            t = TokenInfo(**td) if isinstance(td, dict) else td
+            t = TokenInfo(**td)
             self._auth.store_tokens(uid, t)
             return uid
-        except Exception: return ""
+        except Exception:
+            await self._st.kv_delete(self._st.token_key(uid))
+            return ""
 
     # --- song helpers ---
 
@@ -142,10 +152,10 @@ class LxdxPlugin(Star):
         """显示命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
         t = self._tmpl.get("help")
         if t:
-            desc = "已绑定开发者 API Key" if self._mode() == "api_key" else "OAuth(PKCE) 交互授权"
+            desc = "已绑定开发者 API Key" if not self._is_oauth else "OAuth(PKCE) 交互授权"
             url = await self.html_render(t, {
                 "plugin_display_name": "落雪DX", "plugin_version": "1.0.0",
-                "auth_mode": self._mode(), "auth_desc": desc,
+                "auth_mode": "OAuth(PKCE)" if self._is_oauth else "api_key", "auth_desc": desc,
                 "commands": [
                     {"name": "/lxdx bind <fc>", "desc": "绑定玩家好友码"},
                     {"name": "/lxdx b50 [fc]", "desc": "Best 50 (最佳35 + 最近15)"},
@@ -164,7 +174,7 @@ class LxdxPlugin(Star):
         """绑定好友码：/lxdx bind <friend_code>。API Key 模式会验证好友码有效性。"""
         if not args: yield ev.plain_result("用法: /lxdx bind <friend_code>"); return
         fc = args[0]; uid = ev.get_sender_id()
-        if self._mode() == "api_key":
+        if not self._is_oauth:
             try: await self._client.get_player_info(fc)
             except Exception as e: yield ev.plain_result(f"绑定失败: {e}"); return
         await self._st.kv_put(self._st.binding_key(uid), fc)
@@ -175,7 +185,7 @@ class LxdxPlugin(Star):
     async def _b50(self, ev: AstrMessageEvent, args: list):
         """查询 Best 50：/lxdx b50 [friend_code]。API Key 模式必须提供或已绑定 fc。"""
         uid = ev.get_sender_id()
-        if self._mode() == "api_key":
+        if not self._is_oauth:
             fc = args[0] if args else await self._st.kv_get(self._st.binding_key(uid))
             if not fc: yield ev.plain_result("请先 /lxdx bind <fc> 或 /lxdx b50 <fc>"); return
             try: b50 = await self._client.get_b50(fc=fc)
@@ -206,7 +216,7 @@ class LxdxPlugin(Star):
         """查询歌曲信息：/lxdx song <名称 或 ID>。多个匹配时返回列表。"""
         if not args: yield ev.plain_result("用法: /lxdx song <名称 或 ID>"); return
         q = " ".join(args); uid = ev.get_sender_id()
-        if self._mode() != "api_key": uid = await self._restore_token(ev) or ""
+        if self._is_oauth: uid = await self._restore_token(ev) or ""
         res = await self._lookup(q, uid)
         if not res: yield ev.plain_result(f"未找到: {q}"); return
         if len(res) > 1:
@@ -229,40 +239,55 @@ class LxdxPlugin(Star):
 
     async def _login(self, ev: AstrMessageEvent, args: list = None):
         """OAuth(PKCE) 登录：生成 PKCE 参数，构建授权 URL 返回给用户。"""
-        if self._mode() == "api_key":
+        if not self._is_oauth:
             yield ev.plain_result("API Key 模式无需 OAuth，直接 /lxdx bind <fc>"); return
         pk = LxnsAuth.generate_pkce()
         uid = ev.get_sender_id()
-        await self._st.kv_put(self._st.pkce_key(uid), {"verifier": pk.code_verifier, "state": pk.state})
+        self._pkce[uid] = {"verifier": pk.code_verifier}
         url = self._auth.build_authorize_url(pk, self._ru, SCOPE)
         yield ev.plain_result(f"请打开链接授权:\n{url}\n\n完成后用 /lxdx callback <授权码> 发送给我")
 
     # --- /lxdx callback ---
 
     async def _cb(self, ev: AstrMessageEvent, args: list):
-        """OAuth 回调：用授权码交换 Token，同时自动获取并绑定玩家信息。"""
+        """OAuth 回调：用授权码交换 Token，获取用户资料（主键）和玩家信息（好友码辅助）。"""
         if not args: yield ev.plain_result("用法: /lxdx callback <授权码>"); return
         code, uid = args[0], ev.get_sender_id()
-        pk = await self._st.kv_get(self._st.pkce_key(uid))
+        pk = self._pkce.get(uid)
         if not pk: yield ev.plain_result("未找到授权会话，请先 /lxdx login"); return
         try:
             tok = await self._client.exchange_code(code, pk["verifier"])
             self._auth.store_tokens(uid, tok)
             await self._st.kv_put(self._st.token_key(uid), asdict(tok))
-            await self._st.kv_delete(self._st.pkce_key(uid))
-            extra = ""
+            del self._pkce[uid]
+
+            user_name = ""
+            try:
+                profile = await self._client.get_user_profile(uid)
+                user_name = profile.name
+            except Exception as e:
+                logger.warning(f"[lxdx] get_user_profile failed: {e}")
+
+            fc_info = ""
             try:
                 pi = await self._client.get_player_info(uid=uid)
                 await self._st.kv_put(self._st.binding_key(uid), pi.friend_code)
-                extra = f"玩家:{pi.name} 好友码:{pi.friend_code} Rating:{pi.rating}"
-            except LxnsError as e:
-                logger.warning(f"[lxdx] player info failed: {e}")
-                extra = "(可稍后 /lxdx b50)"
-            yield ev.plain_result(f"授权成功！{extra}")
+                fc_info = f" 好友码:{pi.friend_code} Rating:{pi.rating}"
+            except Exception as e:
+                logger.warning(f"[lxdx] player info fetch failed: {e}")
+                fc_info = " (可稍后 /lxdx b50)"
+
+            msg = f"授权成功！"
+            if user_name:
+                msg += f" 用户名: {user_name}"
+            msg += fc_info
+            yield ev.plain_result(msg)
         except LxnsError as e:
+            self._pkce.pop(uid, None)
             logger.error(f"[lxdx] callback failed: {e}")
             yield ev.plain_result(f"授权失败: {e}")
         except Exception as e:
+            self._pkce.pop(uid, None)
             logger.error(f"[lxdx] callback error: {e}")
             yield ev.plain_result("授权过程中发生未知错误")
 
