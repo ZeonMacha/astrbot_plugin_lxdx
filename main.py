@@ -185,78 +185,15 @@ class LxdxPlugin(Star):
         """落雪DX舞萌指令组"""
         pass
 
-    @lxdx_group.command("help")
-    async def lxdx_help(self, event: AstrMessageEvent):
-        async for r in self._help(event):
-            yield r
-
-    @lxdx_group.command("bind")
-    async def lxdx_bind(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._bind(event, args):
-            yield r
-
-    @lxdx_group.command("b50")
-    async def lxdx_b50(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._b50(event, args):
-            yield r
-
-    @lxdx_group.command("song")
-    async def lxdx_song(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._song(event, args):
-            yield r
-
-    @lxdx_group.command("login")
-    async def lxdx_login(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._login(event, args):
-            yield r
-
     @filter.command_group("lxchu")
     def lxchu_group(self):
         """落雪DX中二节奏指令组"""
         pass
 
-    @lxchu_group.command("help")
-    async def lxchu_help(self, event: AstrMessageEvent):
-        async for r in self._chu_help(event):
-            yield r
-
-    @lxchu_group.command("bind")
-    async def lxchu_bind(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._chu_bind(event, args):
-            yield r
-
-    @lxchu_group.command("bests")
-    async def lxchu_bests(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._chu_bests(event, args):
-            yield r
-
-    @lxchu_group.command("recent")
-    async def lxchu_recent(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._chu_recent(event, args):
-            yield r
-
-    @lxchu_group.command("song")
-    async def lxchu_song(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._chu_song(event, args):
-            yield r
-
-    @lxchu_group.command("login")
-    async def lxchu_login(self, event: AstrMessageEvent):
-        args = self._args(event, 2)
-        async for r in self._chu_login(event, args):
-            yield r
-
     # --- /lxdx help ---
 
-    async def _help(self, ev: AstrMessageEvent, _=None):
+    @lxdx_group.command("help")
+    async def _help(self, ev: AstrMessageEvent):
         """显示命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
         t = self._tmpl.get("help")
         if t:
@@ -289,8 +226,10 @@ class LxdxPlugin(Star):
 
     # --- /lxdx bind ---
 
-    async def _bind(self, ev: AstrMessageEvent, args: list):
+    @lxdx_group.command("bind")
+    async def _bind(self, ev: AstrMessageEvent):
         """绑定好友码：/lxdx bind <friend_code>。API Key 模式会验证好友码有效性。"""
+        args = self._args(ev, 2)
         if not args:
             yield ev.plain_result("用法: /lxdx bind <friend_code>")
             return
@@ -307,8 +246,10 @@ class LxdxPlugin(Star):
 
     # --- /lxdx b50 ---
 
-    async def _b50(self, ev: AstrMessageEvent, args: list):
+    @lxdx_group.command("b50")
+    async def _b50(self, ev: AstrMessageEvent):
         """查询 Best 50：/lxdx b50 [friend_code]。API Key 模式必须提供或已绑定 fc。"""
+        args = self._args(ev, 2)
         uid = ev.get_sender_id()
         if not self._is_oauth:
             fc = args[0] if args else await self._st.kv_get(self._st.binding_key(uid))
@@ -355,8 +296,10 @@ class LxdxPlugin(Star):
 
     # --- /lxdx song ---
 
-    async def _song(self, ev: AstrMessageEvent, args: list):
+    @lxdx_group.command("song")
+    async def _song(self, ev: AstrMessageEvent):
         """查询歌曲信息：/lxdx song <名称 或 ID>。多个匹配时返回列表。"""
+        args = self._args(ev, 2)
         if not args:
             yield ev.plain_result("用法: /lxdx song <名称 或 ID>")
             return
@@ -395,12 +338,21 @@ class LxdxPlugin(Star):
         else:
             yield ev.plain_result(self._song_text(s))
 
-    # --- /lxdx login ---
+    # --- login ---
 
-    async def _login(self, ev: AstrMessageEvent, args: list = None):
-        """OAuth(PKCE) 登录：/lxdx login 启动授权流程，/lxdx login <授权码> 完成回调交换 Token。"""
+    async def _do_login(
+        self,
+        ev: AstrMessageEvent,
+        cmd: str,
+        client,
+        bind_key,
+        fallback: str,
+        label: str,
+    ):
+        """OAuth(PKCE) 登录通用实现。"""
+        args = self._args(ev, 2)
         if not self._is_oauth:
-            yield ev.plain_result("API Key 模式无需 OAuth，直接 /lxdx bind <fc>")
+            yield ev.plain_result(f"API Key 模式无需 OAuth，直接 {cmd} bind <fc>")
             return
         uid = ev.get_sender_id()
 
@@ -408,7 +360,7 @@ class LxdxPlugin(Star):
             code = args[0]
             pk = self._pkce.get(uid)
             if not pk:
-                yield ev.plain_result("未找到授权会话，请先 /lxdx login")
+                yield ev.plain_result(f"未找到授权会话，请先 {cmd} login")
                 return
             try:
                 tok = await self._client.exchange_code(code, pk["verifier"])
@@ -416,42 +368,52 @@ class LxdxPlugin(Star):
                 await self._st.kv_put(self._st.token_key(uid), asdict(tok))
                 del self._pkce[uid]
 
-                user_name = ""
-                try:
-                    profile = await self._client.get_user_profile(uid)
-                    user_name = profile.name
-                except Exception as e:
-                    logger.warning(f"[lxdx] get_user_profile failed: {e}")
-
                 fc_info = ""
                 try:
-                    pi = await self._client.get_player_info(uid=uid)
-                    await self._st.kv_put(self._st.binding_key(uid), pi.friend_code)
+                    pi = await client.get_player_info(uid=uid)
+                    await self._st.kv_put(bind_key(uid), str(pi.friend_code))
                     fc_info = f" 好友码:{pi.friend_code} Rating:{pi.rating}"
                 except Exception as e:
-                    logger.warning(f"[lxdx] player info fetch failed: {e}")
-                    fc_info = " (可稍后 /lxdx b50)"
+                    logger.warning(f"[lxdx] {label} player info fetch failed: {e}")
+                    fc_info = f" (可稍后 {cmd} {fallback})"
 
-                msg = "授权成功！"
-                if user_name:
-                    msg += f" 用户名: {user_name}"
-                msg += fc_info
-                yield ev.plain_result(msg)
+                yield ev.plain_result(f"授权成功！{fc_info}")
             except LxnsError as e:
                 self._pkce.pop(uid, None)
-                logger.error(f"[lxdx] login callback failed: {e}")
+                logger.error(f"[lxdx] {label} login callback failed: {e}")
                 yield ev.plain_result(f"授权失败: {e}")
             except Exception as e:
                 self._pkce.pop(uid, None)
-                logger.error(f"[lxdx] login callback error: {e}")
+                logger.error(f"[lxdx] {label} login callback error: {e}")
                 yield ev.plain_result("授权过程中发生未知错误")
         else:
             pk = LxnsAuth.generate_pkce()
             self._pkce[uid] = {"verifier": pk.code_verifier}
             url = self._auth.build_authorize_url(pk, self._ru, SCOPE)
             yield ev.plain_result(
-                f"请打开链接授权:\n{url}\n\n完成后用 /lxdx login <授权码> 发送给我"
+                f"请打开链接授权:\n{url}\n\n完成后用 {cmd} login <授权码> 发送给我"
             )
+
+    @lxdx_group.command("login")
+    async def _login(self, ev: AstrMessageEvent):
+        """OAuth(PKCE) 登录：/lxdx login 启动授权流程，/lxdx login <授权码> 完成回调交换 Token。"""
+        async for r in self._do_login(
+            ev, "/lxdx", self._client, self._st.binding_key, "b50", "Maimai"
+        ):
+            yield r
+
+    @lxchu_group.command("login")
+    async def _chu_login(self, ev: AstrMessageEvent):
+        """中二节奏 OAuth(PKCE) 登录：/lxchu login 启动授权，/lxchu login <授权码> 完成回调交换 Token。"""
+        async for r in self._do_login(
+            ev,
+            "/lxchu",
+            self._chu_client,
+            self._st.chu_binding_key,
+            "bests",
+            "Chunithm",
+        ):
+            yield r
 
     # --- helpers ---
 
@@ -628,7 +590,9 @@ class LxdxPlugin(Star):
 
     # --- /lxchu help ---
 
-    async def _chu_help(self, ev: AstrMessageEvent, _=None):
+    @lxchu_group.command("help")
+    async def _chu_help(self, ev: AstrMessageEvent):
+        """显示中二节奏命令列表和当前授权模式。优先使用 HTML 模板渲染图片，无模板时回退纯文本。"""
         t = self._tmpl.get("chunithm_help")
         if t:
             desc = (
@@ -664,7 +628,10 @@ class LxdxPlugin(Star):
 
     # --- /lxchu bind ---
 
-    async def _chu_bind(self, ev: AstrMessageEvent, args: list):
+    @lxchu_group.command("bind")
+    async def _chu_bind(self, ev: AstrMessageEvent):
+        """绑定中二节奏好友码：/lxchu bind <friend_code>。API Key 模式会验证好友码有效性。"""
+        args = self._args(ev, 2)
         if not args:
             yield ev.plain_result("用法: /lxchu bind <friend_code>")
             return
@@ -681,7 +648,10 @@ class LxdxPlugin(Star):
 
     # --- /lxchu bests ---
 
-    async def _chu_bests(self, ev: AstrMessageEvent, args: list):
+    @lxchu_group.command("bests")
+    async def _chu_bests(self, ev: AstrMessageEvent):
+        """查询中二节奏 Best 30 + Selection 10 + New 20：/lxchu bests [friend_code]。"""
+        args = self._args(ev, 2)
         uid = ev.get_sender_id()
         if not self._is_oauth:
             fc_raw = (
@@ -735,7 +705,10 @@ class LxdxPlugin(Star):
 
     # --- /lxchu recent ---
 
-    async def _chu_recent(self, ev: AstrMessageEvent, args: list):
+    @lxchu_group.command("recent")
+    async def _chu_recent(self, ev: AstrMessageEvent):
+        """查询中二节奏 Recent 50：/lxchu recent [friend_code]。"""
+        args = self._args(ev, 2)
         uid = ev.get_sender_id()
         if not self._is_oauth:
             fc_raw = (
@@ -786,7 +759,10 @@ class LxdxPlugin(Star):
 
     # --- /lxchu song ---
 
-    async def _chu_song(self, ev: AstrMessageEvent, args: list):
+    @lxchu_group.command("song")
+    async def _chu_song(self, ev: AstrMessageEvent):
+        """查询中二节奏歌曲信息：/lxchu song <名称 或 ID>。多个匹配时返回列表。"""
+        args = self._args(ev, 2)
         if not args:
             yield ev.plain_result("用法: /lxchu song <名称 或 ID>")
             return
@@ -824,56 +800,6 @@ class LxdxPlugin(Star):
             yield ev.image_result(url)
         else:
             yield ev.plain_result(self._chu_song_text(s))
-
-    # --- /lxchu login ---
-
-    async def _chu_login(self, ev: AstrMessageEvent, args: list = None):
-        if not self._is_oauth:
-            yield ev.plain_result("API Key 模式无需 OAuth，直接 /lxchu bind <fc>")
-            return
-        uid = ev.get_sender_id()
-
-        if args:
-            code = args[0]
-            pk = self._pkce.get(uid)
-            if not pk:
-                yield ev.plain_result("未找到授权会话，请先 /lxchu login")
-                return
-            try:
-                tok = await self._client.exchange_code(code, pk["verifier"])
-                self._auth.store_tokens(uid, tok)
-                await self._st.kv_put(self._st.token_key(uid), asdict(tok))
-                del self._pkce[uid]
-
-                fc_info = ""
-                try:
-                    pi = await self._chu_client.get_player_info(uid=uid)
-                    await self._st.kv_put(
-                        self._st.chu_binding_key(uid), str(pi.friend_code)
-                    )
-                    fc_info = f" 好友码:{pi.friend_code} Rating:{pi.rating:.2f}"
-                except Exception as e:
-                    logger.warning(f"[lxdx] Chunithm player info fetch failed: {e}")
-                    fc_info = " (可稍后 /lxchu bests)"
-
-                msg = "授权成功！"
-                msg += fc_info
-                yield ev.plain_result(msg)
-            except LxnsError as e:
-                self._pkce.pop(uid, None)
-                logger.error(f"[lxdx] Chunithm login callback failed: {e}")
-                yield ev.plain_result(f"授权失败: {e}")
-            except Exception as e:
-                self._pkce.pop(uid, None)
-                logger.error(f"[lxdx] Chunithm login callback error: {e}")
-                yield ev.plain_result("授权过程中发生未知错误")
-        else:
-            pk = LxnsAuth.generate_pkce()
-            self._pkce[uid] = {"verifier": pk.code_verifier}
-            url = self._auth.build_authorize_url(pk, self._ru, SCOPE)
-            yield ev.plain_result(
-                f"请打开链接授权:\n{url}\n\n完成后用 /lxchu login <授权码> 发送给我"
-            )
 
     # --- Chunithm text fallback helpers ---
 
