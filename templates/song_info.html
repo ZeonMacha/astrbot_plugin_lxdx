@@ -6,121 +6,117 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #eee;
-    padding: 24px;
-    min-width: 480px;
-    max-width: 560px;
+    background: #f0f0f0; padding: 16px; min-width: 560px; max-width: 640px;
+  }
+  .card {
+    background: #fff; border-radius: 14px; padding: 20px 22px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   }
   .song-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
-    padding-bottom: 14px;
-    border-bottom: 2px solid #f6ba31;
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: 14px; margin-bottom: 16px;
+    border-bottom: 2px solid #e6b422;
   }
   .jacket {
-    width: 80px; height: 80px;
-    border-radius: 8px;
-    border: 2px solid #444;
-    object-fit: cover;
-    background: #2a2a3e;
+    width: 88px; height: 88px; flex-shrink: 0;
+    border-radius: 8px; border: 1px solid #ddd;
+    object-fit: cover; background: #f5f5f5;
   }
-  .song-meta { flex: 1; }
-  .song-title { font-size: 20px; font-weight: bold; color: #f6ba31; }
-  .song-artist { font-size: 13px; color: #bbb; }
-  .song-info-row { font-size: 12px; color: #888; margin-top: 4px; }
-  .song-info-row span { margin-right: 12px; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    margin-bottom: 16px;
+  .song-meta { flex: 1; min-width: 0; }
+  .song-id { font-size: 11px; color: #000; margin-bottom: 2px; }
+  .song-title { font-size: 20px; font-weight: bold; color: #1a3a5c;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .song-artist { font-size: 13px; color: #000; margin-top: 2px; }
+  .song-detail { font-size: 12px; color: #000; margin-top: 5px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+  .tag-utage { color: #e04040; font-weight: bold; }
+  .section-title {
+    font-size: 14px; color: #e6b422; font-weight: bold;
+    margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #eee;
   }
-  th, td {
-    padding: 7px 10px;
-    text-align: center;
-    border-bottom: 1px solid #2a2a3e;
+  .diff-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 10px; margin-bottom: 2px;
+    font-size: 11px; color: #888;
   }
-  th {
-    color: #888;
-    font-weight: normal;
-    font-size: 11px;
-    background: rgba(255,255,255,0.03);
+  .diff-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px; margin-bottom: 4px;
+    background: #fafafa; font-size: 13px; color: #1a3a5c;
   }
-  tr:hover td { background: rgba(255,255,255,0.03); }
-  .diff-basic { color: #22bb5b; font-weight: bold; }
-  .diff-advanced { color: #f6ba31; font-weight: bold; }
-  .diff-expert { color: #f35871; font-weight: bold; }
-  .diff-master { color: #9a69e7; font-weight: bold; }
-  .diff-remaster { color: #ba67f9; font-weight: bold; }
-  .level-value { font-variant-numeric: tabular-nums; }
-  .notes-row { font-size: 11px; color: #999; }
-  .notes-row span { margin: 0 3px; }
-  .note-tap { color: #22bb5b; }
-  .note-hold { color: #f6ba31; }
-  .note-slide { color: #9a69e7; }
-  .note-touch { color: #f35871; }
-  .note-break { color: #ba67f9; }
+  .diff-type {
+    font-size: 10px; padding: 1px 5px; border-radius: 3px;
+    min-width: 30px; text-align: center; font-weight: bold;
+  }
+  .diff-basic { color: #1b9e4b; font-weight: bold; }
+  .diff-advanced { color: #d4a017; font-weight: bold; }
+  .diff-expert { color: #d63350; font-weight: bold; }
+  .diff-master { color: #7b4bb8; font-weight: bold; }
+  .diff-remaster { color: #a44fd4; font-weight: bold; }
+  .type-std { background: #d4edda; color: #1b9e4b; }
+  .type-dx { background: #fff3cd; color: #b8860e; }
+  .col-type { min-width: 30px; }
+  .col-level { min-width: 44px; }
+  .col-rating { min-width: 36px; }
+  .col-designer { flex: 1; min-width: 60px; }
+  .col-notes { min-width: 120px; }
+  .diff-lv-value { color: #000; }
+  .diff-designer { color: #000; font-size: 11px;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .diff-notes { display: flex; gap: 5px; font-size: 11px; color: #000; }
+  .note-tap { color: #1b9e4b; } .note-hold { color: #d4a017; }
+  .note-slide { color: #7b4bb8; } .note-touch { color: #d63350; }
+  .note-break { color: #a44fd4; }
   .footer {
-    text-align: center;
-    font-size: 10px;
-    color: #555;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid #333;
+    text-align: center; font-size: 10px; color: #aaa;
+    margin-top: 14px; padding-top: 10px; border-top: 1px solid #eee;
   }
 </style>
 </head>
 <body>
+<div class="card">
   <div class="song-header">
     {% if jacket_data_uri %}<img class="jacket" src="{{ jacket_data_uri }}" alt="jacket">{% else %}<div class="jacket"></div>{% endif %}
     <div class="song-meta">
+      <div class="song-id">ID: {{ song.display_id }}</div>
       <div class="song-title">{{ song.title }}</div>
       <div class="song-artist">{{ song.artist }}</div>
-      <div class="song-info-row">
-        <span>{{ song.genre }}</span>
-        <span>BPM {{ song.bpm }}</span>
-        <span>ID {{ song.display_id }}</span>
-        {% if song.is_utage %}<span style="color:#f35871;">宴</span>{% endif %}
+      <div class="song-detail">
+        <span>分类: {{ song.genre }}</span>
+        <span>BPM: {{ song.bpm }}</span>
+        <span>版本: {{ song.version }}</span>
+        {% if song.is_utage %}<span class="tag-utage">宴</span>{% endif %}
+        {% if song.map %}<span>区域: {{ song.map }}</span>{% endif %}
       </div>
     </div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>难度</th>
-        <th>等级</th>
-        <th>定数</th>
-        <th>谱面</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for diff in difficulties %}
-      <tr>
-        <td class="diff-{{ diff.css_class }}">{{ diff.name }}</td>
-        <td class="diff-{{ diff.css_class }} level-value">{{ diff.level }}</td>
-        <td class="level-value">
-          {% if diff.difficulty is not none %}{{ "%.1f" | format(diff.difficulty) }}{% else %}-{% endif %}
-        </td>
-        <td class="notes-row">
-          {% if diff.notes %}
-            <span class="note-tap" title="TAP">{{ diff.notes.tap }}</span>
-            <span class="note-hold" title="HOLD">{{ diff.notes.hold }}</span>
-            <span class="note-slide" title="SLIDE">{{ diff.notes.slide }}</span>
-            <span class="note-touch" title="TOUCH">{{ diff.notes.touch }}</span>
-            <span class="note-break" title="BREAK">{{ diff.notes.brk }}</span>
-          {% else %}
-            -
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="section-title">谱面信息 · {{ difficulties|length }} 个难度</div>
+  <div class="diff-header">
+    <span class="col-type">类型</span>
+    <span class="col-level">难度</span>
+    <span class="col-rating">定数</span>
+    <span class="col-designer">谱师</span>
+    <span class="col-notes">物量</span>
+  </div>
+  {% for diff in difficulties %}
+  <div class="diff-row">
+    <span class="diff-type type-{{ diff.type }} col-type">{{ "DX" if diff.type == "dx" else "STD" }}</span>
+    <span class="diff-{{ diff.css_class }} col-level">{{ diff.level }}</span>
+    <span class="diff-lv-value col-rating">{% if diff.level_value > 0 %}{{ "%.1f"|format(diff.level_value) }}{% else %}-{% endif %}</span>
+    <span class="diff-designer col-designer">{{ diff.note_designer or "—" }}</span>
+    <span class="diff-notes col-notes">
+      {% if diff.notes and diff.notes.total > 0 %}
+      <span class="note-tap" title="TAP">{{ diff.notes.tap }}</span>
+      <span class="note-hold" title="HOLD">{{ diff.notes.hold }}</span>
+      <span class="note-slide" title="SLIDE">{{ diff.notes.slide }}</span>
+      <span class="note-touch" title="TOUCH">{{ diff.notes.touch }}</span>
+      <span class="note-break" title="BREAK">{{ diff.notes.break }}</span>
+      {% else %}—{% endif %}
+    </span>
+  </div>
+  {% endfor %}
 
   <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
+</div>
 </body>
 </html>

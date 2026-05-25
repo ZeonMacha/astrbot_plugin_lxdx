@@ -276,9 +276,29 @@ class LxnsClient:
 
     @staticmethod
     def _parse_song(item: dict) -> SongInfo:
-        """将 API 响应中的歌曲条目转换为 SongInfo 模型。兼容多种响应字段命名。"""
         bi = item.get("basic_info", {})
         dd = item.get("difficulties", {})
+        diff_details = []
+        for chart_type in ("standard", "dx"):
+            for d in dd.get(chart_type, []):
+                nt = d.get("notes") or {}
+                diff_details.append(
+                    {
+                        "type": chart_type,
+                        "difficulty": d.get("difficulty", 0),
+                        "level": d.get("level", ""),
+                        "level_value": d.get("level_value", 0.0),
+                        "note_designer": d.get("note_designer", ""),
+                        "notes": {
+                            "total": nt.get("total", 0),
+                            "tap": nt.get("tap", 0),
+                            "hold": nt.get("hold", 0),
+                            "slide": nt.get("slide", 0),
+                            "touch": nt.get("touch", 0),
+                            "break": nt.get("break", 0),
+                        },
+                    }
+                )
         return SongInfo(
             id=item.get("id", 0),
             title=item.get("title", ""),
@@ -287,10 +307,8 @@ class LxnsClient:
             bpm=item.get("bpm", bi.get("bpm", 0)),
             version=item.get("version", bi.get("from", 0)),
             is_utage=item.get("is_utage", bi.get("is_utage", False)),
-            levels=item.get("levels", [0, 0, 0, 0, 0]),
-            difficulties=dd.get("standard", [0.0, 0.0, 0.0, 0.0, 0.0]),
-            dx_difficulties=dd.get("dx", [0.0, 0.0, 0.0, 0.0, 0.0]),
-            notes=item.get("notes", item.get("charts", [])),
+            map=item.get("map", ""),
+            difficulty_details=diff_details,
             image_url=item.get("image_url", item.get("image", "")),
         )
 

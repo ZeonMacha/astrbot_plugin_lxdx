@@ -72,10 +72,8 @@ class SongDatabase:
                 "bpm": s.bpm,
                 "version": s.version,
                 "is_utage": s.is_utage,
-                "levels": s.levels,
-                "difficulties": s.difficulties,
-                "dx_difficulties": s.dx_difficulties,
-                "notes": s.notes,
+                "map": s.map,
+                "difficulty_details": s.difficulty_details,
                 "image_url": s.image_url,
             }
             for s in self._by_id.values()

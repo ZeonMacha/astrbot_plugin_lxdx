@@ -197,6 +197,8 @@ class MaimaiHandler:
                         "bpm": s.bpm,
                         "display_id": s.display_id,
                         "is_utage": s.is_utage,
+                        "version": s.version,
+                        "map": s.map,
                     },
                     "jacket_data_uri": uri,
                     "difficulties": self._diff_rows(s),
@@ -232,23 +234,26 @@ class MaimaiHandler:
 
     @staticmethod
     def _diff_rows(song):
-        rows = []
-        for i, n in enumerate(DIFFICULTY_NAMES):
-            lv = song.levels[i] if i < len(song.levels) else 0
-            df = song.difficulties[i] if i < len(song.difficulties) else 0.0
-            nt = song.notes[i] if i < len(song.notes) else None
-            if lv == 0 and not nt:
-                continue
-            rows.append(
-                {
-                    "name": n,
-                    "css_class": n.lower().replace(":", ""),
-                    "level": lv,
-                    "difficulty": df if df > 0 else None,
-                    "notes": nt,
-                }
-            )
-        return rows
+        return [
+            {
+                "type": d["type"],
+                "name": (
+                    DIFFICULTY_NAMES[d["difficulty"]]
+                    if d["difficulty"] < len(DIFFICULTY_NAMES)
+                    else f"LV{d['difficulty']}"
+                ),
+                "css_class": (
+                    DIFFICULTY_NAMES[d["difficulty"]].lower().replace(":", "")
+                    if d["difficulty"] < len(DIFFICULTY_NAMES)
+                    else ""
+                ),
+                "level": d["level"],
+                "level_value": d["level_value"],
+                "note_designer": d["note_designer"],
+                "notes": d["notes"],
+            }
+            for d in song.difficulty_details
+        ]
 
     @staticmethod
     def _b50_text(b50) -> str:
@@ -269,14 +274,17 @@ class MaimaiHandler:
             f"艺术家:{song.artist}  BPM:{song.bpm}  ID:{song.display_id}"
             + (" (宴)" if song.is_utage else ""),
             "",
-            "难度        等级  定数",
+            "类型  难度        等级  定数  谱师",
         ]
-        for i, n in enumerate(DIFFICULTY_NAMES):
-            lv = song.levels[i] if i < len(song.levels) else 0
-            df = song.difficulties[i] if i < len(song.difficulties) else 0.0
-            if lv == 0:
-                continue
+        for d in song.difficulty_details:
+            idx = d["difficulty"]
+            name = DIFFICULTY_NAMES[idx] if idx < len(DIFFICULTY_NAMES) else f"LV{idx}"
+            lv = d["level_value"]
+            chart = "DX" if d["type"] == "dx" else "STD"
+            designer = d["note_designer"] or "-"
             ls.append(
-                f"  {n:<8} {lv:>4}  {df:.1f}" if df > 0 else f"  {n:<8} {lv:>4}  -"
+                f"  {chart:<3} {name:<8} {d['level']:>4}  {lv:.1f}  {designer}"
+                if lv > 0
+                else f"  {chart:<3} {name:<8} {d['level']:>4}  -  {designer}"
             )
         return "\n".join(ls)

@@ -38,7 +38,7 @@ DIFFICULTY_SHORT = ["Bas", "Adv", "Exp", "Mas", "ReM"]  # 缩写（3 字母）
 
 @dataclass
 class SongInfo:
-    """歌曲信息。dx_difficulties 为 DX 谱面定数（当前未在前端展示）。"""
+    """歌曲信息。difficulty_details 包含每个难度的完整元数据。"""
 
     id: int
     title: str
@@ -47,10 +47,8 @@ class SongInfo:
     bpm: int
     version: int
     is_utage: bool
-    levels: list[int]  # 五个难度的等级（整数 1-15）
-    difficulties: list[float]  # 标准谱面定数
-    dx_difficulties: list[float]  # DX 谱面定数
-    notes: list[dict]  # note 详情（TAP/HOLD/SLIDE/TOUCH/BREAK 数量）
+    map: str = ""
+    difficulty_details: list[dict] = field(default_factory=list)
     image_url: Optional[str] = None
 
     @property
