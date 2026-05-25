@@ -14,13 +14,13 @@
   },
   "client_id": {
     "description": "OAuth 客户端 ID",
-    "obvious_hint": "除非你清楚这是什么，否则不要修改",
+    "hint": "除非你清楚这是什么，否则不要修改",
     "type": "string",
     "default": "405bddd9-c6cb-4307-b4fa-dbd48eb6a5db"
   },
   "redirect_uri": {
     "description": "OAuth 回调地址",
-    "obvious_hint": "除非你清楚这是什么，否则不要修改",
+    "hint": "除非你清楚这是什么，否则不要修改",
     "type": "string",
     "default": "urn:ietf:wg:oauth:2.0:oob"
   }

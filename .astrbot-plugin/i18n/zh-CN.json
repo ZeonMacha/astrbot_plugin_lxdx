@@ -15,11 +15,11 @@
     },
     "client_id": {
       "description": "OAuth 客户端 ID",
-      "obvious_hint": "除非你清楚这是什么，否则不要修改"
+      "hint": "除非你清楚这是什么，否则不要修改"
     },
     "redirect_uri": {
       "description": "OAuth 回调地址",
-      "obvious_hint": "除非你清楚这是什么，否则不要修改"
+      "hint": "除非你清楚这是什么，否则不要修改"
     }
   }
 }
