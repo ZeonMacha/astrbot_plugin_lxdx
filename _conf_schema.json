@@ -8,16 +8,19 @@
   },
   "api_key": {
     "description": "开发者 API key",
+    "hint": "仅使用 开发者 API key 模式时需要填写",
     "type": "string",
     "default": ""
   },
   "client_id": {
-    "description": "OAuth 客户端 ID (除非你清楚这是什么，否则不要修改)",
+    "description": "OAuth 客户端 ID",
+    "obvious_hint": "除非你清楚这是什么，否则不要修改",
     "type": "string",
     "default": "405bddd9-c6cb-4307-b4fa-dbd48eb6a5db"
   },
   "redirect_uri": {
-    "description": "OAuth 回调地址 (除非你清楚这是什么，否则不要修改)",
+    "description": "OAuth 回调地址",
+    "obvious_hint": "除非你清楚这是什么，否则不要修改",
     "type": "string",
     "default": "urn:ietf:wg:oauth:2.0:oob"
   }

@@ -10,13 +10,16 @@
       "labels": ["OAuth", "Developer API Key"]
     },
     "api_key": {
-      "description": "Developer API Key"
+      "description": "Developer API Key",
+      "hint": "Only needed when using Developer API Key mode"
     },
     "client_id": {
-      "description": "OAuth Client ID (Do not change unless you know what this is)"
+      "description": "OAuth Client ID",
+      "obvious_hint": "Do not change unless you know what this is"
     },
     "redirect_uri": {
-      "description": "OAuth Redirect URI (Do not change unless you know what this is)"
+      "description": "OAuth Redirect URI",
+      "obvious_hint": "Do not change unless you know what this is"
     }
   }
 }

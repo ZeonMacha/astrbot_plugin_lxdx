@@ -10,13 +10,16 @@
       "labels": ["OAuth", "开发者 API key"]
     },
     "api_key": {
-      "description": "开发者 API key"
+      "description": "开发者 API key",
+      "hint": "仅使用 开发者 API key 模式时需要填写"
     },
     "client_id": {
-      "description": "OAuth 客户端 ID (除非你清楚这是什么，否则不要修改)"
+      "description": "OAuth 客户端 ID",
+      "obvious_hint": "除非你清楚这是什么，否则不要修改"
     },
     "redirect_uri": {
-      "description": "OAuth 回调地址 (除非你清楚这是什么，否则不要修改)"
+      "description": "OAuth 回调地址",
+      "obvious_hint": "除非你清楚这是什么，否则不要修改"
     }
   }
 }
