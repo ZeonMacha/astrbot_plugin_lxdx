@@ -54,6 +54,7 @@ class SongInfo:
     map: str = ""
     difficulty_details: list[dict] = field(default_factory=list)
     image_url: Optional[str] = None
+    aliases: list[str] = field(default_factory=list)
 
     @property
     def display_id(self) -> int:
@@ -350,6 +351,7 @@ class ChuSongInfo:
     rights: str = ""
     locked: bool = False
     disabled: bool = False
+    aliases: list[str] = field(default_factory=list)
 
 
 @dataclass

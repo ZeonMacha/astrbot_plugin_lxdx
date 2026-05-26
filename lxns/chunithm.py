@@ -29,8 +29,12 @@ class ChunithmHandler:
             logger.info("[lxdx] fetching Chunithm song list...")
             res = await self._p._chu_client.get_song_list(uid)
             self._p._chu_sdb.load_from_list(res.songs)
-            self._p._chu_sdb.save_cache()
             logger.info(f"[lxdx] loaded {self._p._chu_sdb.song_count} Chunithm songs")
+            logger.info("[lxdx] fetching Chunithm aliases...")
+            alias_map = await self._p._chu_client.get_alias_list()
+            self._p._chu_sdb.load_aliases(alias_map)
+            logger.info(f"[lxdx] loaded {len(alias_map)} Chunithm alias groups")
+            self._p._chu_sdb.save_cache()
         except Exception as e:
             logger.warning(f"[lxdx] Chunithm song list fetch failed: {e}")
 

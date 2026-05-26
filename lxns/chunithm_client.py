@@ -231,6 +231,19 @@ class ChunithmClient:
         ]
         return ChuSongListResult(songs=songs, genres=genres, versions=versions)
 
+    async def get_alias_list(self) -> dict[int, list[str]]:
+        """获取别名列表。GET /api/v0/chunithm/alias/list"""
+        d = await self._api_get(
+            f"{CHUNITHM_BASE}/api/v0/chunithm/alias/list", auth=False
+        )
+        result: dict[int, list[str]] = {}
+        for item in d.get("aliases", []):
+            sid = item.get("song_id", 0)
+            aliases = item.get("aliases", [])
+            if sid and aliases:
+                result[sid] = aliases
+        return result
+
     async def get_song(self, song_id: int, uid: str = "") -> Optional[ChuSongInfo]:
         d = await self._api_get(
             f"{CHUNITHM_BASE}/api/v0/chunithm/song/{song_id}", auth=False
@@ -239,16 +252,6 @@ class ChunithmClient:
         if not inner or not inner.get("id"):
             return None
         return self._parse_song(inner)
-
-    async def get_alias_list(self, uid: str = "") -> list[ChuAlias]:
-        d = await self._api_get(
-            f"{CHUNITHM_BASE}/api/v0/chunithm/alias/list", auth=False
-        )
-        inner = d.get("data", d)
-        return [
-            ChuAlias(song_id=a.get("song_id", 0), aliases=a.get("aliases", []))
-            for a in inner.get("aliases", inner if isinstance(inner, list) else [])
-        ]
 
     async def close(self) -> None:
         pass

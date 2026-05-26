@@ -28,8 +28,12 @@ class MaimaiHandler:
         try:
             logger.info("[lxdx] fetching song list...")
             self._p._sdb.load_from_list(await self._p._client.get_song_list(uid))
-            self._p._sdb.save_cache()
             logger.info(f"[lxdx] loaded {self._p._sdb.song_count} songs")
+            logger.info("[lxdx] fetching aliases...")
+            alias_map = await self._p._client.get_alias_list()
+            self._p._sdb.load_aliases(alias_map)
+            logger.info(f"[lxdx] loaded {len(alias_map)} alias groups")
+            self._p._sdb.save_cache()
         except Exception as e:
             logger.warning(f"[lxdx] song list fetch failed: {e}")
 

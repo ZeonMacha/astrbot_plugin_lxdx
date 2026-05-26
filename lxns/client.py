@@ -235,6 +235,17 @@ class LxnsClient:
         d = await self._api_get(f"{BASE_URL}/api/v0/maimai/song/{song_id}", auth=False)
         return self._parse_song(d)
 
+    async def get_alias_list(self) -> dict[int, list[str]]:
+        """获取别名列表。GET /api/v0/maimai/alias/list"""
+        d = await self._api_get(f"{BASE_URL}/api/v0/maimai/alias/list", auth=False)
+        result: dict[int, list[str]] = {}
+        for item in d.get("aliases", []):
+            sid = item.get("song_id", 0)
+            aliases = item.get("aliases", [])
+            if sid and aliases:
+                result[sid] = aliases
+        return result
+
     async def get_player_info(self, fc: str = "", uid: str = "") -> PlayerInfo:
         """获取玩家基本信息。API Key 模式通过 fc 查询，OAuth 模式通过当前 uid 查询。"""
         b = self._endpoint_base()

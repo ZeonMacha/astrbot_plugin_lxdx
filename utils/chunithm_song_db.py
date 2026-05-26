@@ -1,4 +1,4 @@
-"""Chunithm 歌曲数据库：API 获取全曲目列表后缓存为 chunithm_songs.json，支持 ID/标题查询。"""
+"""Chunithm 歌曲数据库：API 获取全曲目列表后缓存为 chunithm_songs.json，支持 ID/标题/别名查询。"""
 
 import json
 from pathlib import Path
@@ -11,6 +11,7 @@ class ChuSongDatabase:
         self._dir = Path(cache_dir)
         self._by_id: dict[int, ChuSongInfo] = {}
         self._by_title: dict[str, list[ChuSongInfo]] = {}
+        self._by_alias: dict[str, ChuSongInfo] = {}
         self._loaded = False
 
     @property
@@ -25,7 +26,10 @@ class ChuSongDatabase:
         return self._by_id.get(sid)
 
     def get_by_title(self, title: str) -> list[ChuSongInfo]:
+        """模糊搜索：先别名精确 → 标题子串 → 多字符容错。"""
         q = title.lower().strip()
+        if s := self._by_alias.get(q):
+            return [s]
         res = [s for k, ss in self._by_title.items() if q in k for s in ss]
         if not res:
             res = [
@@ -34,15 +38,30 @@ class ChuSongDatabase:
                 if all(c in k for c in q if c.strip())
                 for s in ss
             ]
+            if not res:
+                for a, s in self._by_alias.items():
+                    if all(c in a for c in q if c.strip()):
+                        res.append(s)
         return res
 
     def load_from_list(self, songs: list[ChuSongInfo]) -> None:
         self._by_id.clear()
         self._by_title.clear()
+        self._by_alias.clear()
         for s in songs:
             self._by_id[s.id] = s
             self._by_title.setdefault(s.title.lower().strip(), []).append(s)
+            for a in s.aliases:
+                self._by_alias[a.lower().strip()] = s
         self._loaded = True
+
+    def load_aliases(self, alias_map: dict[int, list[str]]) -> None:
+        for sid, aliases in alias_map.items():
+            s = self._by_id.get(sid)
+            if s:
+                s.aliases = aliases
+                for a in aliases:
+                    self._by_alias[a.lower().strip()] = s
 
     def save_cache(self) -> None:
         self._dir.mkdir(parents=True, exist_ok=True)
@@ -58,6 +77,7 @@ class ChuSongDatabase:
                 "rights": s.rights,
                 "locked": s.locked,
                 "disabled": s.disabled,
+                "aliases": s.aliases,
                 "difficulties": [
                     {
                         "difficulty": d.difficulty,
@@ -117,6 +137,7 @@ class ChuSongDatabase:
                         )
                     )
                 item.pop("difficulties", None)
+                item.setdefault("aliases", [])
                 songs.append(ChuSongInfo(difficulties=diffs, **item))
             self.load_from_list(songs)
             return True
