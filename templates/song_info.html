@@ -77,8 +77,8 @@
       .song-info-section {
         position: relative;
         margin-top: 1.5%;
-        padding-left: 2%;
-        padding-right: 6%;
+        padding-left: 1%;
+        padding-right: 5%;
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0.8% 2%;
@@ -101,16 +101,16 @@
         display: flex;
       }
       .song-info-item .label {
-        display: inline-block;
-        min-width: 15%;
-        text-align: left;
+        min-width: 18%;
         flex-shrink: 0;
       }
       .song-info-item .value {
         flex: 1;
-        text-align: center;
-        min-width: 0;
+        text-align: left;
       }
+      .artist-item { margin-top: 0.5%; padding-left: 1%; padding-right: 1%; }
+      .artist-item .label { width: 6vw; min-width: 0; padding-left: 0%; padding-right: 0%;}
+      .artist-item .value { text-align: left; }
       .song-title {
         flex-shrink: 0;
         font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
@@ -311,10 +311,6 @@
               <span class="value">{{ song.display_id }}</span>
             </div>
             <div class="song-info-item">
-              <span class="label">艺术家</span>
-              <span class="value">{{ song.artist }}</span>
-            </div>
-            <div class="song-info-item">
               <span class="label">分类</span>
               <span class="value">{{ song.genre }}</span>
             </div>
@@ -335,6 +331,10 @@
             </div>
             {% endif %}
             <img class="lxns-icon" src="https://maimai.lxns.net/favicon.webp" />
+          </div>
+          <div class="song-info-item artist-item">
+            <span class="label">艺术家</span>
+            <span class="value">{{ song.artist }}</span>
           </div>
         </div>
       </div>
