@@ -58,7 +58,7 @@ class MaimaiHandler:
                 if not self._p._is_oauth
                 else "OAuth(PKCE) 交互授权"
             )
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "plugin_display_name": "落雪DX",
@@ -145,7 +145,7 @@ class MaimaiHandler:
         if t:
             if self._p._debug:
                 logger.info("[lxdx] rendering b50")
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "player_name": b50.player_name,
@@ -187,7 +187,7 @@ class MaimaiHandler:
             if self._p._debug:
                 logger.info(f"[lxdx] rendering song_info for {s.title}")
             uri = await self._p._am.get_jacket_data_uri(s.id) or ""
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "song": {

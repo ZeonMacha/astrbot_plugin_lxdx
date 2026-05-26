@@ -28,6 +28,6 @@
     "description": "调试模式",
     "hint": "开启后输出更多调试日志",
     "type": "bool",
-    "default": false
+    "default": true
   }
 }

@@ -201,7 +201,7 @@ class ChunithmHandler:
                 if not self._p._is_oauth
                 else "OAuth(PKCE) 交互授权"
             )
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "plugin_display_name": "落雪DX (中二节奏)",
@@ -295,7 +295,7 @@ class ChunithmHandler:
         if t:
             if self._p._debug:
                 logger.info("[lxdx] rendering chunithm_bests")
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "player_name": pi.name,
@@ -354,7 +354,7 @@ class ChunithmHandler:
         if t:
             if self._p._debug:
                 logger.info("[lxdx] rendering chunithm_recent")
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "player_name": pi.name,
@@ -393,7 +393,7 @@ class ChunithmHandler:
             if self._p._debug:
                 logger.info(f"[lxdx] rendering chunithm_song_info for {s.title}")
             uri = await self._p._am.get_chunithm_jacket_data_uri(s.id) or ""
-            url = await self._p.html_render(
+            url = await self._p.render_html(
                 t,
                 {
                     "song": {

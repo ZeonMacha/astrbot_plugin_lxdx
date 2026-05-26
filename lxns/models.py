@@ -8,7 +8,11 @@ from dataclasses import dataclass, field
 from typing import Optional
 from enum import IntEnum, StrEnum
 
-JINJA_OPTIONS = {"type": "png", "device_scale_factor_level": "ultra", "full_page": True}
+JINJA_OPTIONS = {
+    "type": "png",
+    "full_page": True,
+    "scale": "css",
+}
 
 
 class DifficultyIndex(IntEnum):

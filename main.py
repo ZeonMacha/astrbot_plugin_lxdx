@@ -3,6 +3,8 @@
 from dataclasses import asdict
 from pathlib import Path
 
+import jinja2
+
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
@@ -25,7 +27,7 @@ SCOPE = "read_player read_user_profile"
     "astrbot_plugin_lxdx",
     "Par1y",
     "国服舞萌DX/中二节奏插件，使用落雪接口，支持 b50、bests、曲目信息等功能。",
-    "1.1.1",
+    "0.3.0",
 )
 class LxdxPlugin(Star):
     """国服舞萌 DX / 中二节奏查分插件。
@@ -66,6 +68,10 @@ class LxdxPlugin(Star):
         )
         self._am = AssetManager(self._st.assets_dir, debug=self._debug)
 
+        self._jinja_env = jinja2.Environment(
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
         self._pkce: dict[str, dict] = {}
         self._tmpl: dict[str, str] = {}
         self._tdir = Path(__file__).parent / "templates"
@@ -124,6 +130,25 @@ class LxdxPlugin(Star):
         return self._method != "api_key"
 
     # --- auth helpers ---
+
+    async def render_html(
+        self, tmpl_str: str, tmpl_data: dict, options: dict | None = None
+    ):
+        import hashlib
+
+        rendered = self._jinja_env.from_string(tmpl_str).render(**tmpl_data)
+        if self._debug:
+            html_hash = hashlib.md5(rendered.encode()).hexdigest()
+            head = rendered[:200].replace("\n", "\\n")
+            logger.info(
+                f"[lxdx] render_html: len={len(rendered)} md5={html_hash}\n"
+                f"  options={options}\n"
+                f"  head: {head}\n"
+            )
+            dump = Path(self._st.cache_dir) / f"render_debug_{html_hash}.html"
+            dump.write_text(rendered, "utf-8")
+            logger.info(f"[lxdx] dumped rendered html to: {dump}")
+        return await self.html_render(rendered, {}, True, options)
 
     async def _persist_token(self, uid: str, token: TokenInfo) -> None:
         """Token 刷新回调：将新 Token 持久化到 KV 存储。"""

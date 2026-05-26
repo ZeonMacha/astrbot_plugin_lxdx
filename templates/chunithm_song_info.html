@@ -3,99 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <style>
+  html, body { width: 100vw; height: 100vh; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #eee; padding: 24px; min-width: 500px; max-width: 580px;
+    background: #f0f0f0;
+    padding: 1.5%;
+    display: flex;
+  }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 2.5%;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 1.5%;
+    overflow: hidden;
   }
   .song-header {
-    display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
-    padding-bottom: 14px; border-bottom: 2px solid #f6ba31;
+    display: flex; align-items: center; gap: 2.5%;
+    padding-bottom: 1.5%; border-bottom: 2px solid #e6b422; flex-shrink: 0;
   }
   .jacket {
-    width: 80px; height: 80px;
+    width: 20%; aspect-ratio: 1;
     border-radius: 8px;
-    border: 2px solid #444;
+    border: 1px solid #ddd;
     object-fit: cover;
-    background: #2a2a3e;
+    background: #f5f5f5;
+    flex-shrink: 0;
   }
-  .song-meta { flex: 1; }
-  .song-title { font-size: 20px; font-weight: bold; color: #f6ba31; }
-  .song-artist { font-size: 13px; color: #bbb; }
-  .song-info-row { font-size: 12px; color: #888; margin-top: 4px; }
-  .song-info-row span { margin-right: 12px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
-  th, td { padding: 7px 10px; text-align: center; border-bottom: 1px solid #2a2a3e; }
-  th { color: #888; font-weight: normal; font-size: 11px; background: rgba(255,255,255,0.03); }
-  tr:hover td { background: rgba(255,255,255,0.03); }
+  .jacket-placeholder {
+    width: 20%; aspect-ratio: 1;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    flex-shrink: 0;
+  }
+  .song-meta { flex: 1; min-width: 0; }
+  .song-title { font-size: 5.5vw; font-weight: bold; color: #e6b422; text-align: right; }
+  .song-artist { font-size: 2.5vw; color: #555; }
+  .song-info-row { font-size: 2.2vw; color: #888; }
+  .song-info-row span { margin-right: 2%; }
+  .diff-header {
+    display: flex; align-items: center; gap: 2%;
+    padding: 0.5% 1.5%; font-size: 2vw; color: #888; flex-shrink: 0;
+  }
+  .diff-header span { text-align: center; }
+  .diff-list {
+    flex: 1 1 0; min-height: 0;
+    display: flex; flex-direction: column;
+  }
+  .diff-row {
+    display: flex; align-items: center; gap: 2%;
+    padding: 1% 1.5%; border-radius: 6px;
+    flex: 1 1 0; min-height: 0;
+    max-height: {{ 14 if difficulties|length <= 2 else 10 if difficulties|length <= 4 else 7 }}vw;
+    font-size: {{ 2.3 if difficulties|length <= 3 else 2 if difficulties|length <= 5 else 1.7 }}vw;
+    overflow: hidden;
+  }
+  .diff-row:nth-child(even) { background: #f5f5f5; }
+  .diff-row:nth-child(odd) { background: #fff; }
+  .col-name { flex: 1 1 25%; text-align: left; }
+  .col-level { flex: 0 0 15%; text-align: center; }
+  .col-rating { flex: 0 0 15%; text-align: center; }
+  .col-designer { flex: 1 1 20%; text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .col-notes { flex: 1 1 25%; text-align: center; display: flex; gap: 1%; justify-content: center; }
   .diff-basic { color: #22bb5b; font-weight: bold; }
-  .diff-advanced { color: #f6ba31; font-weight: bold; }
-  .diff-expert { color: #f35871; font-weight: bold; }
-  .diff-master { color: #9a69e7; font-weight: bold; }
+  .diff-advanced { color: #d4a017; font-weight: bold; }
+  .diff-expert { color: #d63350; font-weight: bold; }
+  .diff-master { color: #7b4bb8; font-weight: bold; }
   .diff-ultima { color: #ba67f9; font-weight: bold; }
   .diff-worlds-end { color: #e040fb; font-weight: bold; }
   .level-value { font-variant-numeric: tabular-nums; }
-  .notes-row { font-size: 11px; color: #999; }
-  .notes-row span { margin: 0 3px; }
   .note-tap { color: #22bb5b; }
-  .note-hold { color: #f6ba31; }
-  .note-slide { color: #9a69e7; }
-  .note-air { color: #f35871; }
+  .note-hold { color: #d4a017; }
+  .note-slide { color: #7b4bb8; }
+  .note-air { color: #d63350; }
   .note-flick { color: #ba67f9; }
-  .footer { text-align: center; font-size: 10px; color: #555; margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; }
+  .footer { text-align: center; font-size: 1.8vw; color: #aaa; padding-top: 1.5%; border-top: 1px solid #eee; flex-shrink: 0; }
 </style>
 </head>
 <body>
-  <div class="song-header">
-    {% if jacket_data_uri %}<img class="jacket" src="{{ jacket_data_uri }}" alt="jacket">{% else %}<div class="jacket"></div>{% endif %}
-    <div class="song-meta">
-      <div class="song-title">{{ song.title }}</div>
-      <div class="song-artist">{{ song.artist }}</div>
-      <div class="song-info-row">
-        <span>{{ song.genre }}</span>
-        <span>BPM {{ song.bpm }}</span>
-        <span>ID {{ song.id }}</span>
-        {% if song.map %}<span>{{ song.map }}</span>{% endif %}
+  <div class="card">
+    <div class="song-header">
+      {% if jacket_data_uri %}<img class="jacket" src="{{ jacket_data_uri }}" alt="jacket">{% else %}<div class="jacket-placeholder"></div>{% endif %}
+      <div class="song-meta">
+        <div class="song-title">{{ song.title }}</div>
+        <div class="song-artist">{{ song.artist }}</div>
+        <div class="song-info-row">
+          <span>{{ song.genre }}</span>
+          <span>BPM {{ song.bpm }}</span>
+          <span>ID {{ song.id }}</span>
+          {% if song.map %}<span>{{ song.map }}</span>{% endif %}
+        </div>
       </div>
     </div>
+
+    <div class="diff-header">
+      <span class="col-name">难度</span>
+      <span class="col-level">等级</span>
+      <span class="col-rating">定数</span>
+      <span class="col-designer">谱师</span>
+      <span class="col-notes">谱面</span>
+    </div>
+    <div class="diff-list">
+    {% for diff in difficulties %}
+    <div class="diff-row">
+      <span class="diff-{{ diff.css_class }} col-name">{{ diff.name }}</span>
+      <span class="diff-{{ diff.css_class }} col-level level-value">{{ diff.level }}</span>
+      <span class="level-value col-rating">
+        {% if diff.level_value > 0 %}{{ "%.1f" | format(diff.level_value) }}{% else %}-{% endif %}
+      </span>
+      <span class="col-designer">{{ diff.note_designer or "-" }}</span>
+      <span class="col-notes">
+        {% if diff.notes %}
+          <span class="note-tap" title="TAP">{{ diff.notes.tap }}</span>
+          <span class="note-hold" title="HOLD">{{ diff.notes.hold }}</span>
+          <span class="note-slide" title="SLIDE">{{ diff.notes.slide }}</span>
+          <span class="note-air" title="AIR">{{ diff.notes.air }}</span>
+          <span class="note-flick" title="FLICK">{{ diff.notes.flick }}</span>
+        {% else %}
+          -
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+    </div>
+
+    <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
   </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>难度</th>
-        <th>等级</th>
-        <th>定数</th>
-        <th>谱师</th>
-        <th>谱面</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for diff in difficulties %}
-      <tr>
-        <td class="diff-{{ diff.css_class }}">{{ diff.name }}</td>
-        <td class="diff-{{ diff.css_class }} level-value">{{ diff.level }}</td>
-        <td class="level-value">
-          {% if diff.level_value > 0 %}{{ "%.1f" | format(diff.level_value) }}{% else %}-{% endif %}
-        </td>
-        <td style="font-size: 11px; color: #999;">{{ diff.note_designer or "-" }}</td>
-        <td class="notes-row">
-          {% if diff.notes %}
-            <span class="note-tap" title="TAP">{{ diff.notes.tap }}</span>
-            <span class="note-hold" title="HOLD">{{ diff.notes.hold }}</span>
-            <span class="note-slide" title="SLIDE">{{ diff.notes.slide }}</span>
-            <span class="note-air" title="AIR">{{ diff.notes.air }}</span>
-            <span class="note-flick" title="FLICK">{{ diff.notes.flick }}</span>
-          {% else %}
-            -
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
 </body>
 </html>
