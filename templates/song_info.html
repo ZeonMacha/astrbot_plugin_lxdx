@@ -71,25 +71,33 @@
       .song-meta {
         flex: 1;
         min-width: 0;
+        display: flex;
+        flex-direction: column;
       }
       .song-info-section {
         position: relative;
         margin-top: 1.5%;
         padding-left: 2%;
+        padding-right: 6%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8% 2%;
+        flex: 1;
       }
       .lxns-icon {
         position: absolute;
-        right: 0;
+        right: 1%;
         top: 50%;
         transform: translateY(-50%);
         width: 12%;
         aspect-ratio: 1;
         opacity: 0.85;
+        border: 2px solid #e0d4f7;
+        border-radius: 8px;
       }
       .song-info-item {
         font-size: 1.8vw;
         color: #000;
-        margin-bottom: 0.8%;
         display: flex;
       }
       .song-info-item .label {
@@ -104,6 +112,7 @@
         min-width: 0;
       }
       .song-title {
+        flex-shrink: 0;
         font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
         font-weight: bold;
         color: #e6b422;
@@ -171,22 +180,27 @@
       .diff-basic {
         color: #1b9e4b;
         font-weight: bold;
+        text-align: center;
       }
       .diff-advanced {
         color: #d4a017;
         font-weight: bold;
+        text-align: center;
       }
       .diff-expert {
         color: #d63350;
         font-weight: bold;
+        text-align: center;
       }
       .diff-master {
         color: #7b4bb8;
         font-weight: bold;
+        text-align: center;
       }
       .diff-remaster {
         color: #a44fd4;
         font-weight: bold;
+        text-align: center;
       }
       .type-std {
         background: #d4edda;
@@ -199,19 +213,31 @@
       .col-type {
         flex: 0 0 12%;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .col-level {
         flex: 0 0 15%;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .col-rating {
         flex: 0 0 12%;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .col-designer {
         flex: 1 1 30%;
         min-width: 0;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .col-notes {
         flex: 0 0 20%;
@@ -219,6 +245,7 @@
         display: flex;
         gap: 2%;
         justify-content: center;
+        align-items: center;
       }
       .diff-lv-value {
         color: #000;
