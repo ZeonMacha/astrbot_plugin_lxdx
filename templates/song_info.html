@@ -2,6 +2,18 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <link
+      href="https://fontsapi.zeoseven.com/243/main/result.css"
+      onload="this.rel = 'stylesheet'"
+      rel="preload"
+      as="style"
+      crossorigin
+    />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fontsapi.zeoseven.com/243/main/result.css"
+    /></noscript>
     <style>
       * {
         margin: 0;
@@ -14,9 +26,8 @@
         height: 100vh;
       }
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
-          "Hiragino Sans", "Meiryo", "Yu Gothic", "Segoe UI", Arial, sans-serif;
+        font-family: "寒蝉半圆体", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-weight: normal;
         background: #f0f0f0;
         padding: 1.5%;
         display: flex;
@@ -61,8 +72,22 @@
         flex: 1;
         min-width: 0;
       }
+      .song-info-section {
+        position: relative;
+        margin-top: 1.5%;
+        padding-left: 2%;
+      }
+      .lxns-icon {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12%;
+        aspect-ratio: 1;
+        opacity: 0.85;
+      }
       .song-info-item {
-        font-size: 2.6vw;
+        font-size: 1.8vw;
         color: #000;
         margin-bottom: 0.8%;
         display: flex;
@@ -79,10 +104,11 @@
         min-width: 0;
       }
       .song-title {
-        font-size: 5.5vw;
+        font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
         font-weight: bold;
         color: #e6b422;
         text-align: right;
+        margin-bottom: 3%;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -118,7 +144,7 @@
         flex: 1 1 0;
         min-height: 0;
         max-height: {{ 12 if difficulties|length <= 2 else 8 }}vw;
-        font-size: {{ 2.4 if difficulties|length <= 3 else 2 if difficulties|length <= 5 else 1.7 }}vw;
+        font-size: {{ 2.2 if difficulties|length <= 3 else 1.8 if difficulties|length <= 5 else 1.5 }}vw;
         color: #e6b422;
         overflow: hidden;
       }
@@ -134,6 +160,13 @@
         border-radius: 3px;
         text-align: center;
         font-weight: bold;
+      }
+      .lh {
+        flex: 1;
+        text-align: center;
+        font-size: 1.3vw;
+        color: #888;
+        white-space: nowrap;
       }
       .diff-basic {
         color: #1b9e4b;
@@ -160,7 +193,7 @@
         color: #1b9e4b;
       }
       .type-dx {
-        background: #fff3cd;
+        background: transparent;
         color: #b8860e;
       }
       .col-type {
@@ -181,8 +214,10 @@
         text-align: center;
       }
       .col-notes {
-        flex: 1 1 30%;
+        flex: 0 0 20%;
         text-align: center;
+        display: flex;
+        gap: 2%;
         justify-content: center;
       }
       .diff-lv-value {
@@ -197,10 +232,14 @@
       }
       .diff-notes {
         display: flex;
-        gap: 1%;
-        font-size: 2vw;
+        gap: 2%;
+        font-size: 1.6vw;
         color: #000;
         justify-content: center;
+      }
+      .diff-notes > span {
+        flex: 1;
+        text-align: center;
       }
       .note-tap {
         color: #1b9e4b;
@@ -239,34 +278,37 @@
         {% endif %}
         <div class="song-meta">
           <div class="song-title">{{ song.title }}</div>
-          <div class="song-info-item">
-            <span class="label">ID</span>
-            <span class="value">{{ song.display_id }}</span>
+          <div class="song-info-section">
+            <div class="song-info-item">
+              <span class="label">ID</span>
+              <span class="value">{{ song.display_id }}</span>
+            </div>
+            <div class="song-info-item">
+              <span class="label">艺术家</span>
+              <span class="value">{{ song.artist }}</span>
+            </div>
+            <div class="song-info-item">
+              <span class="label">分类</span>
+              <span class="value">{{ song.genre }}</span>
+            </div>
+            <div class="song-info-item">
+              <span class="label">BPM</span>
+              <span class="value">{{ song.bpm }}</span>
+            </div>
+            <div class="song-info-item">
+              <span class="label">版本</span>
+              <span class="value">{{ song.version }}</span>
+            </div>
+            {% if song.is_utage %}
+            <div class="song-info-item"><span class="tag-utage">宴</span></div>
+            {% endif %} {% if song.map %}
+            <div class="song-info-item">
+              <span class="label">区域</span>
+              <span class="value">{{ song.map }}</span>
+            </div>
+            {% endif %}
+            <img class="lxns-icon" src="https://maimai.lxns.net/favicon.webp" />
           </div>
-          <div class="song-info-item">
-            <span class="label">艺术家</span>
-            <span class="value">{{ song.artist }}</span>
-          </div>
-          <div class="song-info-item">
-            <span class="label">分类</span>
-            <span class="value">{{ song.genre }}</span>
-          </div>
-          <div class="song-info-item">
-            <span class="label">BPM</span>
-            <span class="value">{{ song.bpm }}</span>
-          </div>
-          <div class="song-info-item">
-            <span class="label">版本</span>
-            <span class="value">{{ song.version }}</span>
-          </div>
-          {% if song.is_utage %}
-          <div class="song-info-item"><span class="tag-utage">宴</span></div>
-          {% endif %} {% if song.map %}
-          <div class="song-info-item">
-            <span class="label">区域</span>
-            <span class="value">{{ song.map }}</span>
-          </div>
-          {% endif %}
         </div>
       </div>
 
@@ -275,7 +317,11 @@
         <span class="col-level">难度</span>
         <span class="col-rating">定数</span>
         <span class="col-designer">谱师</span>
-        <span class="col-notes">物量</span>
+        <span class="col-notes">
+          <span class="lh">TAP</span><span class="lh">HLD</span
+          ><span class="lh">SLD</span><span class="lh">TCH</span
+          ><span class="lh">BRK</span>
+        </span>
       </div>
       <div class="diff-list">
         {% for diff in difficulties %}

@@ -182,6 +182,10 @@ class MaimaiHandler:
             yield ev.plain_result(f"多个结果:\n{ns}")
             return
         s = res[0]
+        try:
+            s = await self._p._client.get_song(s.id)
+        except Exception as e:
+            logger.warning(f"[lxdx] failed to fetch detailed song info: {e}")
         t = self._p._tmpl.get("song_info")
         if t:
             if self._p._debug:

@@ -230,6 +230,11 @@ class LxnsClient:
         d = await self._api_get(f"{BASE_URL}/api/v0/maimai/song/list", auth=False)
         return [self._parse_song(i) for i in d.get("songs", d)]
 
+    async def get_song(self, song_id: int) -> SongInfo:
+        """获取单曲详细信息（含物量）。GET /api/v0/maimai/song/{song_id}"""
+        d = await self._api_get(f"{BASE_URL}/api/v0/maimai/song/{song_id}", auth=False)
+        return self._parse_song(d)
+
     async def get_player_info(self, fc: str = "", uid: str = "") -> PlayerInfo:
         """获取玩家基本信息。API Key 模式通过 fc 查询，OAuth 模式通过当前 uid 查询。"""
         b = self._endpoint_base()

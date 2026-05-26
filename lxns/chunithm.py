@@ -388,6 +388,12 @@ class ChunithmHandler:
             yield ev.plain_result(f"多个结果:\n{ns}")
             return
         s = res[0]
+        try:
+            fd = await self._p._chu_client.get_song(s.id)
+            if fd:
+                s = fd
+        except Exception as e:
+            logger.warning(f"[lxdx] failed to fetch detailed chunithm song: {e}")
         t = self._p._tmpl.get("chunithm_song_info")
         if t:
             if self._p._debug:
