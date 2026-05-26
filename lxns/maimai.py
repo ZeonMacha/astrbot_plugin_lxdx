@@ -70,7 +70,7 @@ class MaimaiHandler:
                     "auth_mode": "OAuth(PKCE)" if self._p._is_oauth else "api_key",
                     "auth_desc": desc,
                     "commands": [
-                        {"name": "/lxdx bind <fc>", "desc": "绑定玩家好友码"},
+                        {"name": "/lxdx bind <好友码>", "desc": "绑定玩家好友码"},
                         {
                             "name": "/lxdx b50 [fc]",
                             "desc": "Best 50 (最佳35 + 最近15)",
@@ -87,7 +87,7 @@ class MaimaiHandler:
             yield ev.image_result(url)
         else:
             yield ev.plain_result(
-                "/lxdx help|bind <fc>|b50 [fc]|song <名称/ID>|login [<码>]"
+                "/lxdx help|bind <好友码>|b50 [fc]|song <名称/ID>|login [<码>]"
             )
 
     # --- /lxdx bind ---
@@ -122,7 +122,7 @@ class MaimaiHandler:
                 else await self._p._st.kv_get(self._p._st.binding_key(uid))
             )
             if not fc:
-                yield ev.plain_result("请先 /lxdx bind <fc> 或 /lxdx b50 <fc>")
+                yield ev.plain_result("请先 /lxdx bind <好友码> 或 /lxdx b50 <好友码>")
                 return
             try:
                 b50 = await self._p._client.get_b50(fc=fc)

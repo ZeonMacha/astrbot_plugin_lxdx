@@ -213,7 +213,7 @@ class ChunithmHandler:
                     "auth_mode": "OAuth(PKCE)" if self._p._is_oauth else "api_key",
                     "auth_desc": desc,
                     "commands": [
-                        {"name": "/lxchu bind <fc>", "desc": "绑定玩家好友码"},
+                        {"name": "/lxchu bind <好友码>", "desc": "绑定玩家好友码"},
                         {
                             "name": "/lxchu bests [fc]",
                             "desc": "Best 30 + Selection 10 + New 20",
@@ -234,7 +234,7 @@ class ChunithmHandler:
             yield ev.image_result(url)
         else:
             yield ev.plain_result(
-                "/lxchu help|bind <fc>|bests [fc]|recent [fc]|song <名称/ID>|login [<码>]"
+                "/lxchu help|bind <好友码>|bests [fc]|recent [fc]|song <名称/ID>|login [<码>]"
             )
 
     # --- /lxchu bind ---
@@ -269,7 +269,9 @@ class ChunithmHandler:
                 else await self._p._st.kv_get(self._p._st.chu_binding_key(uid))
             )
             if not fc_raw:
-                yield ev.plain_result("请先 /lxchu bind <fc> 或 /lxchu bests <fc>")
+                yield ev.plain_result(
+                    "请先 /lxchu bind <好友码> 或 /lxchu bests <好友码>"
+                )
                 return
             fc = int(fc_raw)
             try:
@@ -328,7 +330,9 @@ class ChunithmHandler:
                 else await self._p._st.kv_get(self._p._st.chu_binding_key(uid))
             )
             if not fc_raw:
-                yield ev.plain_result("请先 /lxchu bind <fc> 或 /lxchu recent <fc>")
+                yield ev.plain_result(
+                    "请先 /lxchu bind <好友码> 或 /lxchu recent <好友码>"
+                )
                 return
             fc = int(fc_raw)
             try:

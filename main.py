@@ -234,7 +234,7 @@ class LxdxPlugin(Star):
         """OAuth(PKCE) 登录通用实现。"""
         args = self._args(ev, 2)
         if not self._is_oauth:
-            yield ev.plain_result(f"API Key 模式无需 OAuth，直接 {cmd} bind <fc>")
+            yield ev.plain_result(f"API Key 模式无需 OAuth，直接 {cmd} bind <好友码>")
             return
         uid = ev.get_sender_id()
 
