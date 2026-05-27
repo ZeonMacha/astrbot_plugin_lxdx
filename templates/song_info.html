@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link
-      href="https://fontsapi.zeoseven.com/84/main/result.css"
+      href="https://fontsapi.zeoseven.com/413/main/result.css"
       onload="this.rel = 'stylesheet'"
       rel="preload"
       as="style"
@@ -12,10 +12,11 @@
     <noscript
       ><link
         rel="stylesheet"
-        href="https://fontsapi.zeoseven.com/84/main/result.css"
-    /></noscript>
+        href="https://fontsapi.zeoseven.com/413/main/result.css"
+      />
+    </noscript>
     <link
-      href="https://fontsapi.zeoseven.com/713/main/result.css"
+      href="https://fontsapi.zeoseven.com/851/main/result.css"
       onload="this.rel = 'stylesheet'"
       rel="preload"
       as="style"
@@ -24,296 +25,299 @@
     <noscript
       ><link
         rel="stylesheet"
-        href="https://fontsapi.zeoseven.com/713/main/result.css"
-    /></noscript>
+        href="https://fontsapi.zeoseven.com/851/main/result.css"
+      />
+    </noscript>
     <style>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        html,
-        body {
-          width: 100vw;
-          height: 100vh;
-        }
-        body {
-          font-family: "DouyinSans", "PingFang SC", "Microsoft YaHei", sans-serif;
-          font-weight: normal;
-          background: #f0f0f0;
-          padding: 1.5%;
-          display: flex;
-        }
-        .card {
-          background: #fff;
-          border-radius: 14px;
-          padding: 2.5%;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-          display: flex;
-          flex-direction: column;
-          flex: 1;
-          gap: 2%;
-          overflow: hidden;
-        }
-        .song-header {
-          display: flex;
-          align-items: flex-start;
-          gap: 3%;
-          padding-bottom: 1.5%;
-          border-bottom: 2px solid #e6b422;
-          flex-shrink: 0;
-        }
-        .jacket {
-          width: 24%;
-          aspect-ratio: 1;
-          flex-shrink: 0;
-          border: 1px solid #ddd;
-          object-fit: cover;
-          background: #f5f5f5;
-        }
-        .jacket-placeholder {
-          width: 22%;
-          aspect-ratio: 1;
-          flex-shrink: 0;
-          border-radius: 8px;
-          border: 1px solid #ddd;
-          background: #f5f5f5;
-        }
-        .song-meta {
-          flex: 1;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          flex-wrap: wrap;
-        }
-        .song-info-section {
-          position: relative;
-          padding-left: 1%;
-          padding-right: 5%;
-          display: grid;
-          grid-template-columns: 29vw 25vw;
-          flex: 1;
-        }
-        .lxns-icon {
-          position: absolute;
-          right: 1%;
-          top: 70%;
-          transform: translateY(-50%);
-          width: 12%;
-          aspect-ratio: 1;
-          opacity: 0.85;
-          border: 2px solid #e0d4f7;
-          border-radius: 8px;
-        }
-        .song-info-item {
-          font-size: 1.8vw;
-          color: #000;
-          display: flex;
-          margin: 0.5vw 0vw;
-        }
-        .song-info-item .label {
-          width: 5.75vw;
-          flex-shrink: 0;
-          margin-right: 1.25vw;
-        }
-        .song-info-item .value {
-          flex: 1;
-          text-align: left;
-        }
-        .artist-item { margin-top: 0.5%; padding-left: 1%; padding-right: 1%; }
-        .artist-item .label { width: 5.75vw; min-width: 0; padding-left: 0%; padding-right: 0%; margin-right: 1vw;}
-        .artist-item .value { text-align: left; }
-        .song-title {
-          flex-shrink: 0;
-          font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
-          font-weight: bold;
-          color: #e6b422;
-          text-align: right;
-          margin-bottom: 8.5%;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          font-family: "Kiwi Maru";
-        }
-        .tag-utage {
-          color: #e04040;
-          font-weight: bold;
-        }
-        .diff-header {
-          display: flex;
-          align-items: center;
-          gap: 2%;
-          padding: 0.5% 1.5%;
-          font-size: 2vw;
-          color: #888;
-          flex-shrink: 0;
-        }
-        .diff-header span {
-          text-align: center;
-        }
-        .diff-list {
-          flex: 1 1 0;
-          min-height: 0;
-          display: flex;
-          flex-direction: column;
-        }
-        .diff-row {
-          display: flex;
-          align-items: center;
-          gap: 2%;
-          padding: 1% 1.5%;
-          border-radius: 6px;
-          flex: 1 1 0;
-          min-height: 0;
-          max-height: {{ 12 if difficulties|length <= 2 else 8 }}vw;
-          font-size: {{ 2.2 if difficulties|length <= 3 else 1.8 if difficulties|length <= 5 else 1.5 }}vw;
-          color: #e6b422;
-          overflow: hidden;
-        }
-        .diff-row:nth-child(even) {
-          background: #f5f5f5;
-        }
-        .diff-row:nth-child(odd) {
-          background: #fff;
-        }
-        .diff-type {
-          font-size: 1.8vw;
-          padding: 0.2% 1%;
-          border-radius: 3px;
-          text-align: center;
-          font-weight: bold;
-        }
-        .lh {
-          flex: 1;
-          text-align: center;
-          font-size: 1.3vw;
-          color: #888;
-          white-space: nowrap;
-        }
-        .diff-basic {
-          color: #1b9e4b;
-          font-weight: bold;
-          text-align: center;
-        }
-        .diff-advanced {
-          color: #d4a017;
-          font-weight: bold;
-          text-align: center;
-        }
-        .diff-expert {
-          color: #d63350;
-          font-weight: bold;
-          text-align: center;
-        }
-        .diff-master {
-          color: #7b4bb8;
-          font-weight: bold;
-          text-align: center;
-        }
-        .diff-remaster {
-          color: #a44fd4;
-          font-weight: bold;
-          text-align: center;
-        }
-        .type-std {
-          background: #d4edda;
-          color: #1b9e4b;
-        }
-        .type-dx {
-          background: transparent;
-          color: #b8860e;
-        }
-        .col-type {
-          flex: 0 0 12%;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .col-level {
-          flex: 0 0 15%;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .col-rating {
-          flex: 0 0 12%;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .col-designer {
-          flex: 1 1 30%;
-          min-width: 0;
-          text-align: center;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .col-notes {
-          flex: 0 0 20%;
-          text-align: center;
-          display: flex;
-          gap: 2%;
-          justify-content: center;
-          align-items: center;
-        }
-        .diff-lv-value {
-          color: #000;
-        }
-        .diff-designer {
-          color: #000;
-          font-size: 2vw;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-        }
-        .diff-notes {
-          display: flex;
-          gap: 2%;
-          font-size: 1.6vw;
-          color: #000;
-          justify-content: center;
-        }
-        .diff-notes > span {
-          flex: 1;
-          text-align: center;
-        }
-        .note-tap {
-          color: #1b9e4b;
-        }
-        .note-hold {
-          color: #d4a017;
-        }
-        .note-slide {
-          color: #7b4bb8;
-        }
-        .note-touch {
-          color: #d63350;
-        }
-        .note-break {
-          color: #a44fd4;
-        }
-        .footer {
-          text-align: center;
-          font-size: 1.8vw;
-          color: #aaa;
-          padding-top: 1.5%;
-          border-top: 1px solid #eee;
-          flex-shrink: 0;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100vw;
+        height: 100vh;
+      }
+      body {
+        font-family: "KURIYAMAKOUCHIFONT_N", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-weight: normal;
+        background: #f0f0f0;
+        padding: 1.5%;
+        display: flex;
+      }
+      .card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 2.5%;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        gap: 2%;
+        overflow: hidden;
+      }
+      .song-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 3%;
+        padding-bottom: 1.5%;
+        border-bottom: 2px solid #e6b422;
+        flex-shrink: 0;
+      }
+      .jacket {
+        width: 24%;
+        aspect-ratio: 1;
+        flex-shrink: 0;
+        border: 1px solid #ddd;
+        object-fit: cover;
+        background: #f5f5f5;
+      }
+      .jacket-placeholder {
+        width: 22%;
+        aspect-ratio: 1;
+        flex-shrink: 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background: #f5f5f5;
+      }
+      .song-meta {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+      }
+      .song-info-section {
+        position: relative;
+        padding-left: 1%;
+        padding-right: 5%;
+        display: grid;
+        grid-template-columns: 29vw 25vw;
+        flex: 1;
+      }
+      .lxns-icon {
+        position: absolute;
+        right: 1%;
+        top: 70%;
+        transform: translateY(-50%);
+        width: 12%;
+        aspect-ratio: 1;
+        opacity: 0.85;
+        border: 2px solid #e0d4f7;
+        border-radius: 8px;
+      }
+      .song-info-item {
+        font-size: 1.8vw;
+        color: #000;
+        display: flex;
+        margin: 0.5vw 0vw;
+      }
+      .song-info-item .label {
+        width: 5.75vw;
+        flex-shrink: 0;
+        margin-right: 1.25vw;
+      }
+      .song-info-item .value {
+        flex: 1;
+        text-align: left;
+      }
+      .artist-item { margin-top: 0.5%; padding-left: 1%; padding-right: 1%; }
+      .artist-item .label { width: 6vw; min-width: 0; padding-left: 0%; padding-right: 0%; margin-right: 1vw;}
+      .artist-item .value { text-align: left; }
+      .song-title {
+        flex-shrink: 0;
+        font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
+        font-weight: bold;
+        color: #e6b422;
+        text-align: right;
+        margin-bottom: 8.5%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-family: "Reggae One";
+      }
+      .tag-utage {
+        color: #e04040;
+        font-weight: bold;
+      }
+      .diff-header {
+        display: flex;
+        align-items: center;
+        gap: 2%;
+        padding: 0.5% 1.5%;
+        font-size: 2vw;
+        color: #888;
+        flex-shrink: 0;
+      }
+      .diff-header span {
+        text-align: center;
+      }
+      .diff-list {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .diff-row {
+        display: flex;
+        align-items: center;
+        gap: 2%;
+        padding: 1% 1.5%;
+        border-radius: 6px;
+        flex: 1 1 0;
+        min-height: 0;
+        max-height: {{ 12 if difficulties|length <= 2 else 8 }}vw;
+        font-size: {{ 2.2 if difficulties|length <= 3 else 1.8 if difficulties|length <= 5 else 1.5 }}vw;
+        color: #e6b422;
+        overflow: hidden;
+      }
+      .diff-row:nth-child(odd) {
+        background: #f5f5f5;
+      }
+      .diff-row:nth-child(even) {
+        background: #fff;
+      }
+      .diff-type {
+        font-size: 1.8vw;
+        padding: 0.2% 1%;
+        border-radius: 3px;
+        text-align: center;
+        font-weight: bold;
+      }
+      .lh {
+        flex: 1;
+        text-align: center;
+        font-size: 1.3vw;
+        color: #888;
+        white-space: nowrap;
+      }
+      .diff-basic {
+        color: #1b9e4b;
+        font-weight: bold;
+        text-align: center;
+      }
+      .diff-advanced {
+        color: #d4a017;
+        font-weight: bold;
+        text-align: center;
+      }
+      .diff-expert {
+        color: #d63350;
+        font-weight: bold;
+        text-align: center;
+      }
+      .diff-master {
+        color: #7b4bb8;
+        font-weight: bold;
+        text-align: center;
+      }
+      .diff-remaster {
+        color: #a44fd4;
+        font-weight: bold;
+        text-align: center;
+      }
+      .type-std {
+        background: #d4edda;
+        color: #1b9e4b;
+      }
+      .type-dx {
+        background: transparent;
+        color: #b8860e;
+      }
+      .col-type {
+        flex: 0 0 12%;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .col-level {
+        flex: 0 0 12%;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .col-rating {
+        flex: 0 0 12%;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .col-designer {
+        flex: 1 1 30%;
+        min-width: 0;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .col-notes {
+        flex: 0 0 30%;
+        text-align: center;
+        display: flex;
+        gap: 2%;
+        justify-content: center;
+        align-items: center;
+      }
+      .diff-lv-value {
+        color: #000;
+      }
+      .diff-designer {
+        color: #000;
+        font-size: 2vw;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .diff-notes {
+        display: flex;
+        gap: 2%;
+        font-size: 1.6vw;
+        color: #000;
+        justify-content: center;
+      }
+      .diff-notes > span {
+        flex: 1;
+        text-align: center;
+      }
+      .note-tap {
+        color: #e84a8c;
+      }
+      .note-hold {
+        color: #f5d347;
+      }
+      .note-slide {
+        color: #3b82f6;
+      }
+      .note-touch {
+        color: #22c55e;
+      }
+      .note-break {
+        color: #f97316;
+      }
+      .footer {
+        text-align: center;
+        font-size: 1.8vw;
+        color: #aaa;
+        padding-top: 1.5%;
+        border-top: 1px solid #eee;
+        flex-shrink: 0;
+      }
     </style>
   </head>
   <body>
     <div class="card">
       <div class="song-header">
-        {% if jacket_data_uri %}<img
+        {% set info_count = 4 %} {% if song.is_utage %}{% set info_count =
+        info_count + 1 %}{% endif %} {% if song.map %}{% set info_count =
+        info_count + 1 %}{% endif %} {% if jacket_data_uri %}<img
           class="jacket"
           src="{{ jacket_data_uri }}"
           alt="jacket"
+          style="width: {{ 26 if info_count >= 5 else 24 }}%;"
         />{% else %}
         <div class="jacket-placeholder"></div>
         {% endif %}

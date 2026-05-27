@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <link
-      href="https://fontsapi.zeoseven.com/243/main/result.css"
+      href="https://fontsapi.zeoseven.com/413/main/result.css"
+      onload="this.rel = 'stylesheet'"
+      rel="preload"
+      as="style"
+      crossorigin
+    />
+    <noscript
+      >
+      <link
+      href="https://fontsapi.zeoseven.com/851/main/result.css"
       onload="this.rel = 'stylesheet'"
       rel="preload"
       as="style"
@@ -12,13 +21,14 @@
     <noscript
       ><link
         rel="stylesheet"
-        href="https://fontsapi.zeoseven.com/243/main/result.css"
-    /></noscript>
+        href="https://fontsapi.zeoseven.com/851/main/result.css"
+      />
+    </noscript>
     <style>
       html, body { width: 100vw; height: 100vh; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        font-family: "寒蝉半圆体", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family: "KURIYAMAKOUCHIFONT_N", "PingFang SC", "Microsoft YaHei", sans-serif;
         font-weight: normal;
         background: #f0f0f0;
         padding: 1.5%;
@@ -40,8 +50,7 @@
         padding-bottom: 1.5%; border-bottom: 2px solid #e6b422; flex-shrink: 0;
       }
       .jacket {
-        width: 20%; aspect-ratio: 1;
-        border-radius: 8px;
+        width: 23%; aspect-ratio: 1;
         border: 1px solid #ddd;
         object-fit: cover;
         background: #f5f5f5;
@@ -77,6 +86,7 @@
         border-radius: 8px;
       }
       .song-title {
+        font-family: "Reggae One";
         flex-shrink: 0;
         font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
         font-weight: bold; color: #e6b422; text-align: right; margin-bottom: 3%;
@@ -106,16 +116,16 @@
         font-size: {{ 2.2 if difficulties|length <= 3 else 1.8 if difficulties|length <= 5 else 1.5 }}vw;
         overflow: hidden;
       }
-      .diff-row:nth-child(even) { background: #f5f5f5; }
-      .diff-row:nth-child(odd) { background: #fff; }
-      .col-name { flex: 0 0 18%; text-align: center; display: flex; align-items: center; justify-content: center; }
+      .diff-row:nth-child(odd) { background: #f5f5f5; }
+      .diff-row:nth-child(even) { background: #fff; }
+      .col-name { flex: 0 0 13.5%; text-align: center; display: flex; align-items: center; justify-content: center; }
       .col-level { flex: 0 0 12%; text-align: center; display: flex; align-items: center; justify-content: center; }
       .col-rating { flex: 0 0 12%; text-align: center; display: flex; align-items: center; justify-content: center; }
       .lh {
         flex: 1; text-align: center; font-size: 1.3vw; color: #888; white-space: nowrap;
       }
       .col-designer { flex: 0 0 25%; text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
-      .col-notes { flex: 0 0 25%; text-align: center; display: flex; gap: 2%; justify-content: center; align-items: center; font-size: 1.6vw; }
+      .col-notes { flex: 0 0 30%; text-align: center; display: flex; gap: 2%; justify-content: center; align-items: center; font-size: 1.6vw; }
       .col-notes > span { flex: 1; text-align: center; }
       .diff-basic { color: #22bb5b; font-weight: bold; }
       .diff-advanced { color: #d4a017; font-weight: bold; }
@@ -124,11 +134,11 @@
       .diff-ultima { color: #ba67f9; font-weight: bold; }
       .diff-worlds-end { color: #e040fb; font-weight: bold; }
       .level-value { font-variant-numeric: tabular-nums; }
-      .note-tap { color: #22bb5b; }
-      .note-hold { color: #d4a017; }
-      .note-slide { color: #7b4bb8; }
-      .note-air { color: #d63350; }
-      .note-flick { color: #ba67f9; }
+      .note-tap { color: #e84a8c; }
+      .note-hold { color: #f5d347; }
+      .note-slide { color: #3b82f6; }
+      .note-air { color: #22c55e; }
+      .note-flick { color: #f97316; }
       .footer { text-align: center; font-size: 1.8vw; color: #aaa; padding-top: 1.5%; border-top: 1px solid #eee; flex-shrink: 0; }
     </style>
   </head>
