@@ -135,8 +135,25 @@ class LxdxPlugin(Star):
         self, tmpl_str: str, tmpl_data: dict, options: dict | None = None
     ):
         import hashlib
+        import base64
 
-        rendered = self._jinja_env.from_string(tmpl_str).render(**tmpl_data)
+        # 读取本地icon.png并转换为base64
+        icon_path = Path(__file__).parent / "logo.png"
+        local_icon_base64 = ""
+        if icon_path.exists():
+            try:
+                icon_data = icon_path.read_bytes()
+                local_icon_base64 = base64.b64encode(icon_data).decode("ascii")
+                if self._debug:
+                    logger.info(f"[lxdx] loaded local icon: {len(icon_data)} bytes")
+            except Exception as e:
+                logger.warning(f"[lxdx] failed to load local icon: {e}")
+
+        # 将base64图标注入模板数据
+        tmpl_data_with_icon = tmpl_data.copy()
+        tmpl_data_with_icon["local_icon_base64"] = local_icon_base64
+
+        rendered = self._jinja_env.from_string(tmpl_str).render(**tmpl_data_with_icon)
         if self._debug:
             html_hash = hashlib.md5(rendered.encode()).hexdigest()
             head = rendered[:200].replace("\n", "\\n")

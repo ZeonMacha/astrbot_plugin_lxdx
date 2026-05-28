@@ -173,7 +173,11 @@
               <span class="label">ID</span>
               <span class="value">{{ song.id }}</span>
             </div>
+            {% if local_icon_base64 %}
+            <img class="lxns-icon" src="data:image/png;base64,{{ local_icon_base64 }}" />
+            {% else %}
             <img class="lxns-icon" src="https://maimai.lxns.net/favicon.webp" />
+            {% endif %}
           </div>
           <div class="song-info-item artist-item">
             <span class="label">艺术家</span>
