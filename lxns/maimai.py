@@ -217,6 +217,146 @@ class MaimaiHandler:
         else:
             yield ev.plain_result(self._song_text(s))
 
+    # --- /lxdx score ---
+
+    async def score(self, ev: AstrMessageEvent):
+        """查询单曲成绩：/lxdx score <歌曲名/ID> <难度> [类型]。
+
+        难度: 0-4 或 basic/advanced/expert/master/remaster
+        类型: std/dx (可选，默认查询所有类型)
+        """
+        args = self._args(ev, 2)
+        if len(args) < 2:
+            yield ev.plain_result(
+                "用法: /lxdx score <歌曲名/ID> <难度> [类型]\n难度: 0-4 或 basic/advanced/expert/master/remaster\n类型: std/dx (可选)"
+            )
+            return
+
+        # 解析参数
+        q = args[0]
+        diff_str = args[1].lower()
+        song_type = args[2].lower() if len(args) > 2 else ""
+
+        # 解析难度
+        diff_map = {
+            "basic": 0,
+            "bas": 0,
+            "0": 0,
+            "advanced": 1,
+            "adv": 1,
+            "1": 1,
+            "expert": 2,
+            "exp": 2,
+            "2": 2,
+            "master": 3,
+            "mas": 3,
+            "3": 3,
+            "remaster": 4,
+            "rem": 4,
+            "4": 4,
+        }
+        level_index = diff_map.get(diff_str, -1)
+        if level_index == -1:
+            yield ev.plain_result(
+                f"无效难度: {diff_str}\n支持: 0-4 或 basic/advanced/expert/master/remaster"
+            )
+            return
+
+        # 查找歌曲（复用查歌逻辑，兼容别名）
+        uid = ev.get_sender_id()
+        if self._p._is_oauth:
+            uid = await self._p._restore_token(ev) or ""
+            if not uid:
+                yield ev.plain_result("请先登录: /lxdx login")
+                return
+
+        res = await self._lookup(q, uid)
+        if not res:
+            yield ev.plain_result(f"未找到歌曲: {q}")
+            return
+        if len(res) > 1:
+            ns = "\n".join(f"  · {s.title} (ID:{s.display_id})" for s in res[:10])
+            yield ev.plain_result(f"多个结果，请使用ID查询:\n{ns}")
+            return
+
+        song = res[0]
+
+        # 获取好友码（仅API Key模式需要）
+        fc = ""
+        if not self._p._is_oauth:
+            fc = await self._p._st.kv_get(self._p._st.binding_key(uid))
+            if not fc:
+                yield ev.plain_result("请先绑定好友码: /lxdx bind <好友码>")
+                return
+
+        # 查询成绩（只使用song_id）
+        try:
+            score = await self._p._client.get_player_best(
+                song_id=song.id,
+                level_index=level_index,
+                song_type=song_type,
+                fc=fc,
+                uid=uid,
+            )
+            if not score:
+                yield ev.plain_result(
+                    f"未找到成绩: {song.title} {DIFFICULTY_NAMES[level_index]}"
+                )
+                return
+
+            # 获取玩家信息
+            try:
+                pi = await self._p._client.get_player_info(fc=fc, uid=uid)
+            except Exception as e:
+                logger.warning(f"[lxdx] failed to fetch player info: {e}")
+                pi = None
+
+            # 渲染模板
+            t = self._p._tmpl.get("song_score")
+            if t:
+                if self._p._debug:
+                    logger.info(f"[lxdx] rendering song_score for {song.title}")
+                uri = await self._p._am.get_jacket_data_uri(song.id) or ""
+                url = await self._p.render_html(
+                    t,
+                    {
+                        "song": {
+                            "title": song.title,
+                        },
+                        "player": {
+                            "name": pi.name if pi else "Unknown",
+                            "rating": pi.rating if pi else 0,
+                            "friend_code": pi.friend_code if pi else fc,
+                        },
+                        "score": {
+                            "type": score.type,
+                            "difficulty_name": DIFFICULTY_NAMES[level_index],
+                            "difficulty_class": DIFFICULTY_NAMES[level_index]
+                            .lower()
+                            .replace(":", ""),
+                            "level": score.level,
+                            "achievements": score.achievements,
+                            "rate": score.rate,
+                            "dx_score": score.dx_score,
+                            "dx_rating": score.dx_rating,
+                            "fc": score.fc,
+                            "fs": score.fs,
+                            "dx_star": score.dx_star,
+                            "play_time": score.play_time or "-",
+                        },
+                        "jacket_data_uri": uri,
+                    },
+                    options=JINJA_OPTIONS,
+                )
+                yield ev.image_result(url)
+            else:
+                yield ev.plain_result(self._score_text(song, score, level_index))
+        except LxnsError as e:
+            yield ev.plain_result(f"查询失败: {e}")
+        except Exception as e:
+            logger.error(f"[lxdx] score query error: {e}")
+            yield ev.plain_result("查询过程中发生错误")
+
     # --- helpers ---
 
     @staticmethod
@@ -295,4 +435,29 @@ class MaimaiHandler:
                 if lv > 0
                 else f"  {chart:<3} {name:<8} {d['level']:>4}  -  {designer}"
             )
+        return "\n".join(ls)
+
+    @staticmethod
+    def _score_text(song, score, level_index) -> str:
+        """生成单曲成绩的纯文本输出。"""
+        chart_type = "DX" if score.type == "dx" else "STD"
+        diff_name = (
+            DIFFICULTY_NAMES[level_index]
+            if level_index < len(DIFFICULTY_NAMES)
+            else f"LV{level_index}"
+        )
+
+        ls = [
+            f"{song.title}",
+            f"{chart_type} {diff_name} {score.level}",
+            "",
+            f"达成率: {score.achievements:.4f}%",
+            f"评级: {score.rate.upper()}",
+            f"DX分数: {score.dx_score}",
+            f"DX Rating: {int(score.dx_rating)}",
+            f"FULL COMBO: {score.fc.upper() if score.fc else '-'}",
+            f"FULL SYNC: {score.fs.upper() if score.fs else '-'}",
+            f"DX星级: {'★' * score.dx_star if score.dx_star > 0 else '-'}",
+            f"游玩时间: {score.play_time if score.play_time else '-'}",
+        ]
         return "\n".join(ls)

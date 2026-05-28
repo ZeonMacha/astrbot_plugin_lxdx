@@ -181,6 +181,66 @@ class SongRecord:
     song: Optional[SongInfo] = None
 
 
+@dataclass
+class Score:
+    """单曲成绩（用于查询玩家在特定谱面的最佳成绩）。"""
+
+    id: int
+    song_name: str = ""
+    level: str = ""
+    level_index: int = 0
+    achievements: float = 0.0
+    fc: str = ""
+    fs: str = ""
+    dx_score: int = 0
+    dx_star: int = 0
+    dx_rating: float = 0.0
+    rate: str = ""
+    type: str = ""
+    play_time: Optional[str] = None
+    upload_time: Optional[str] = None
+    last_played_time: Optional[str] = None
+
+    @property
+    def achievement_pct(self) -> float:
+        """将 achievements 统一转换为百分率。"""
+        return (
+            self.achievements / 100.0 if self.achievements > 100 else self.achievements
+        )
+
+    @property
+    def rank_display(self) -> str:
+        """根据达成率返回评级显示（D ~ AP+）。"""
+        a = self.achievement_pct
+        if a >= 100.5:
+            return "AP+"
+        if a >= 100.0:
+            return "AP"
+        if a >= 99.5:
+            return "SSS+"
+        if a >= 99.0:
+            return "SSS"
+        if a >= 98.0:
+            return "SS+"
+        if a >= 97.0:
+            return "SS"
+        if a >= 94.0:
+            return "S+"
+        if a >= 90.0:
+            return "S"
+        if a >= 80.0:
+            return "AAA"
+        if a >= 70.0:
+            return "AA"
+        if a >= 60.0:
+            return "A"
+        if a >= 50.0:
+            return "B"
+        if a >= 40.0:
+            return "C"
+        return "D"
+
+
 # --- 自定义异常 ---
 
 

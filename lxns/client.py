@@ -12,6 +12,7 @@ from .models import (
     PlayerInfo,
     SongInfo,
     SongRecord,
+    Score,
     TokenInfo,
     UserProfile,
     LxnsError,
@@ -288,6 +289,45 @@ class LxnsClient:
         )
         return SongRecord(records=[self._parse_record(i) for i in d.get("records", d)])
 
+    async def get_player_best(
+        self,
+        song_id: int,
+        level_index: int = 0,
+        song_type: str = "",
+        fc: str = "",
+        uid: str = "",
+    ) -> Optional[Score]:
+        """获取玩家在特定谱面的最佳成绩。
+
+        Args:
+            song_id: 曲目ID
+            level_index: 难度索引（0-4）
+            song_type: 谱面类型（standard/dx）
+            fc: 好友码（API Key模式）
+            uid: 用户ID（OAuth模式）
+        """
+        b = self._endpoint_base()
+        params = [f"song_id={song_id}"]
+
+        if level_index >= 0:
+            params.append(f"level_index={level_index}")
+
+        if song_type:
+            params.append(f"type={song_type}")
+
+        query = "&".join(params)
+
+        # 使用 _api_key 判断是否为 API Key 模式
+        if self._api_key and fc:
+            url = f"{b}/player/{fc}/best?{query}"
+        elif self._api_key:
+            raise ApiRequestError("开发者 API 模式需要提供 friend_code")
+        else:
+            url = f"{b}/player/best?{query}"
+
+        d = await self._api_get(url, uid)
+        return self._parse_score(d) if d else None
+
     # --- 响应解析器 ---
 
     @staticmethod
@@ -358,6 +398,39 @@ class LxnsClient:
             combo_status=item.get("combo_status", ""),
             sync_status=item.get("sync_status", ""),
             play_time=item.get("play_time", None),
+        )
+
+    @staticmethod
+    def _parse_score(item: dict) -> Score:
+        """将 API 响应中的单曲成绩转换为 Score 模型。"""
+        li = item.get("level_index", 0)
+        if isinstance(li, str):
+            try:
+                li = int(li)
+            except ValueError:
+                li = {
+                    "basic": 0,
+                    "advanced": 1,
+                    "expert": 2,
+                    "master": 3,
+                    "remaster": 4,
+                }.get(li.lower(), 0)
+        return Score(
+            id=item.get("id", 0),
+            song_name=item.get("song_name", ""),
+            level=item.get("level", ""),
+            level_index=li,
+            achievements=item.get("achievements", 0.0),
+            fc=item.get("fc", ""),
+            fs=item.get("fs", ""),
+            dx_score=item.get("dx_score", 0),
+            dx_star=item.get("dx_star", 0),
+            dx_rating=item.get("dx_rating", 0.0),
+            rate=item.get("rate", ""),
+            type=item.get("type", ""),
+            play_time=item.get("play_time"),
+            upload_time=item.get("upload_time"),
+            last_played_time=item.get("last_played_time"),
         )
 
     @classmethod

@@ -116,6 +116,7 @@ class LxdxPlugin(Star):
             "help",
             "b50",
             "song_info",
+            "song_score",
             "chunithm_help",
             "chunithm_bests",
             "chunithm_song_info",
@@ -235,6 +236,14 @@ class LxdxPlugin(Star):
     async def _song(self, ev: AstrMessageEvent):
         """查询舞萌歌曲信息：/lxdx song <名称 或 ID>。"""
         async for r in self._maimai.song(ev):
+            yield r
+
+    # --- /lxdx score ---
+
+    @lxdx_group.command("score")
+    async def _score(self, ev: AstrMessageEvent):
+        """查询单曲成绩：/lxdx score <歌曲名/ID> <难度> [类型]。"""
+        async for r in self._maimai.score(ev):
             yield r
 
     # --- login ---

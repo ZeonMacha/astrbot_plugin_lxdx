@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      href="https://fontsapi.zeoseven.com/413/main/result.css"
+      onload="this.rel = 'stylesheet'"
+      rel="preload"
+      as="style"
+      crossorigin
+    />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fontsapi.zeoseven.com/413/main/result.css"
+      />
+    </noscript>
+    <link
+      href="https://fontsapi.zeoseven.com/851/main/result.css"
+      onload="this.rel = 'stylesheet'"
+      rel="preload"
+      as="style"
+      crossorigin
+    />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fontsapi.zeoseven.com/851/main/result.css"
+      />
+    </noscript>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100vw;
+        height: 100vh;
+      }
+      body {
+        font-family: "KURIYAMAKOUCHIFONT_N", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-weight: normal;
+        background: #f0f0f0;
+        padding: 1.5%;
+        display: flex;
+      }
+      .card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 2.5%;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        gap: 2%;
+        overflow: hidden;
+      }
+      .song-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 3%;
+        padding-bottom: 1.5%;
+        border-bottom: 2px solid #e6b422;
+        flex-shrink: 0;
+      }
+      .jacket {
+        width: 24%;
+        aspect-ratio: 1;
+        flex-shrink: 0;
+        border: 1px solid #ddd;
+        object-fit: cover;
+        background: #f5f5f5;
+      }
+      .jacket-placeholder {
+        width: 22%;
+        aspect-ratio: 1;
+        flex-shrink: 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background: #f5f5f5;
+      }
+      .song-meta {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .song-title {
+        flex-shrink: 0;
+        font-size: {{ 5.5 if song.title|length <= 8 else 4.2 if song.title|length <= 16 else 3.2 }}vw;
+        font-weight: bold;
+        color: #e6b422;
+        text-align: right;
+        margin-bottom: 3%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-family: "Reggae One";
+      }
+      .player-info {
+        display: flex;
+        gap: 3%;
+        margin-bottom: 2%;
+        padding: 1.5% 2%;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      .player-info-item {
+        font-size: 2vw;
+        color: #000;
+        display: flex;
+        align-items: center;
+        gap: 1vw;
+      }
+      .player-info-item .label {
+        color: #666;
+        font-size: 1.6vw;
+      }
+      .player-info-item .value {
+        font-weight: bold;
+        color: #e6b422;
+      }
+      .score-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2%;
+        padding: 2%;
+        background: #fafafa;
+        border-radius: 8px;
+      }
+      .score-header {
+        display: flex;
+        align-items: center;
+        gap: 2%;
+        padding-bottom: 1.5%;
+        border-bottom: 2px solid #e6b422;
+      }
+      .score-header-item {
+        font-size: 2.2vw;
+        font-weight: bold;
+        color: #e6b422;
+      }
+      .score-content {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2% 3%;
+        padding: 1%;
+      }
+      .score-item {
+        display: flex;
+        align-items: center;
+        padding: 1.5% 2%;
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .score-item .label {
+        min-width: 30%;
+        font-size: 1.8vw;
+        color: #666;
+      }
+      .score-item .value {
+        flex: 1;
+        font-size: 2vw;
+        font-weight: bold;
+        color: #000;
+        text-align: right;
+      }
+      .diff-type {
+        font-size: 1.8vw;
+        padding: 0.3% 1.5%;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .type-std {
+        background: #d4edda;
+        color: #1b9e4b;
+      }
+      .type-dx {
+        background: #fff3cd;
+        color: #b8860e;
+      }
+      .diff-basic {
+        color: #1b9e4b;
+      }
+      .diff-advanced {
+        color: #d4a017;
+      }
+      .diff-expert {
+        color: #d63350;
+      }
+      .diff-master {
+        color: #7b4bb8;
+      }
+      .diff-remaster {
+        color: #a44fd4;
+      }
+      .rate-d { color: #999; }
+      .rate-c { color: #8b4513; }
+      .rate-b { color: #cd7f32; }
+      .rate-bb { color: #c0c0c0; }
+      .rate-bbb { color: #ffd700; }
+      .rate-a { color: #32cd32; }
+      .rate-aa { color: #00bfff; }
+      .rate-aaa { color: #ff69b4; }
+      .rate-s { color: #ff8c00; }
+      .rate-sp { color: #ff6347; }
+      .rate-ss { color: #dc143c; }
+      .rate-ssp { color: #b22222; }
+      .rate-sss { color: #8b0000; }
+      .rate-sssp { color: #ffd700; }
+      .fc-none { color: #999; }
+      .fc-fc { color: #32cd32; }
+      .fc-fcp { color: #00bfff; }
+      .fc-ap { color: #ffd700; }
+      .fc-app { color: #ff69b4; }
+      .fs-none { color: #999; }
+      .fs-fs { color: #9370db; }
+      .fs-fsp { color: #ba55d3; }
+      .fs-fsd { color: #da70d6; }
+      .fs-fsdp { color: #ee82ee; }
+      .footer {
+        text-align: center;
+        font-size: 1.8vw;
+        color: #aaa;
+        padding-top: 1.5%;
+        border-top: 1px solid #eee;
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="song-header">
+        {% if jacket_data_uri %}<img
+          class="jacket"
+          src="{{ jacket_data_uri }}"
+          alt="jacket"
+        />{% else %}
+        <div class="jacket-placeholder"></div>
+        {% endif %}
+        <div class="song-meta">
+          <div class="song-title">{{ song.title }}</div>
+          <div class="player-info">
+            <div class="player-info-item">
+              <span class="label">玩家</span>
+              <span class="value">{{ player.name }}</span>
+            </div>
+            <div class="player-info-item">
+              <span class="label">Rating</span>
+              <span class="value">{{ player.rating }}</span>
+            </div>
+            <div class="player-info-item">
+              <span class="label">好友码</span>
+              <span class="value">{{ player.friend_code }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-header">
+          <span class="score-header-item">
+            <span class="diff-type type-{{ score.type }}">{{ "DX" if score.type == "dx" else "STD" }}</span>
+            <span class="diff-{{ score.difficulty_class }}">{{ score.difficulty_name }}</span>
+            {{ score.level }}
+          </span>
+        </div>
+        <div class="score-content">
+          <div class="score-item">
+            <span class="label">达成率</span>
+            <span class="value">{{ "%.4f"|format(score.achievements) }}%</span>
+          </div>
+          <div class="score-item">
+            <span class="label">评级</span>
+            <span class="value rate-{{ score.rate|lower }}">{{ score.rate|upper }}</span>
+          </div>
+          <div class="score-item">
+            <span class="label">DX分数</span>
+            <span class="value">{{ score.dx_score }}</span>
+          </div>
+          <div class="score-item">
+            <span class="label">DX Rating</span>
+            <span class="value">{{ score.dx_rating|int }}</span>
+          </div>
+          <div class="score-item">
+            <span class="label">FULL COMBO</span>
+            <span class="value fc-{{ score.fc|lower if score.fc else 'none' }}">{{ score.fc|upper if score.fc else "-" }}</span>
+          </div>
+          <div class="score-item">
+            <span class="label">FULL SYNC</span>
+            <span class="value fs-{{ score.fs|lower if score.fs else 'none' }}">{{ score.fs|upper if score.fs else "-" }}</span>
+          </div>
+          <div class="score-item">
+            <span class="label">DX星级</span>
+            <span class="value">{{ "★" * score.dx_star if score.dx_star > 0 else "-" }}</span>
+          </div>
+          <div class="score-item">
+            <span class="label">游玩时间</span>
+            <span class="value">{{ score.play_time if score.play_time else "-" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">数据来源：落雪查分器 (maimai.lxns.net)</div>
+    </div>
+  </body>
+</html>
