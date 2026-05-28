@@ -122,9 +122,9 @@
         font-weight: bold;
         color: #e6b422;
       }
-      .icon-avatar {
-        height: 5vw;
-        width: 5vw;
+      .character-avatar {
+        height: 10vw;
+        width: 10vw;
         border-radius: 6px;
         border: 2px solid #e6b422;
         object-fit: cover;
@@ -163,13 +163,6 @@
         font-weight: bold;
         padding: 0.5% 2%;
         border-radius: 6px;
-      }
-      .type-badge {
-        font-size: 1.5vw;
-        padding: 0.3% 1.5%;
-        border-radius: 4px;
-        font-weight: bold;
-        margin-left: 1%;
       }
       .badges {
         position: absolute;
@@ -212,8 +205,8 @@
         padding-left: 0.5vw;
       }
       .diff-basic {
-        color: #1b9e4b;
-        background: rgba(27, 158, 75, 0.1);
+        color: #22bb5b;
+        background: rgba(34, 187, 91, 0.1);
       }
       .diff-advanced {
         color: #d4a017;
@@ -227,29 +220,40 @@
         color: #7b4bb8;
         background: rgba(123, 75, 184, 0.1);
       }
-      .diff-remaster {
-        color: #a44fd4;
-        background: rgba(164, 79, 212, 0.1);
+      .diff-ultima {
+        color: #ba67f9;
+        background: rgba(186, 103, 249, 0.1);
       }
-      .type-std {
-        background: #d4edda;
-        color: #1b9e4b;
+      .diff-worlds-end {
+        color: #e040fb;
+        background: rgba(224, 64, 251, 0.1);
       }
-      .type-dx {
-        background: #fff3cd;
-        color: #b8860e;
-      }
-      .fc-fc { color: #32cd32; }
-      .fc-fcp { color: #00bfff; }
-      .fc-ap { color: #ffd700; }
-      .fc-app { color: #ff69b4; }
-      .fs-fs { color: #9370db; }
-      .fs-fsp { color: #ba55d3; }
-      .fs-fsd { color: #da70d6; }
-      .fs-fsdp { color: #ee82ee; }
+      .rank-d { color: #999; }
+      .rank-c { color: #8b4513; }
+      .rank-b { color: #cd7f32; }
+      .rank-bb { color: #c0c0c0; }
+      .rank-bbb { color: #ffd700; }
+      .rank-a { color: #32cd32; }
+      .rank-aa { color: #00bfff; }
+      .rank-aaa { color: #ff69b4; }
+      .rank-s { color: #ff8c00; }
+      .rank-sp { color: #ff6347; }
+      .rank-ss { color: #dc143c; }
+      .rank-ssp { color: #b22222; }
+      .rank-sss { color: #8b0000; }
+      .rank-sssp { color: #ffd700; }
+      .clear-failed { color: #999; }
+      .clear-clear { color: #32cd32; }
+      .clear-hard { color: #ff8c00; }
+      .clear-brave { color: #dc143c; }
+      .clear-absolute { color: #8b0000; }
+      .clear-catastrophy { color: #ffd700; }
+      .fc-fullcombo { color: #32cd32; }
+      .fc-alljustice { color: #ffd700; }
+      .fc-alljusticecritical { color: #ff69b4; }
       .footer {
         text-align: center;
-        font-size: 1.8vw;
+        font-size: 1vw;
         color: #aaa;
         padding-top: 1.5%;
         border-top: 1px solid #eee;
@@ -276,10 +280,10 @@
             </div>
             <div class="player-info-item">
               <span class="label">Rating</span>
-              <span class="value">{{ player.rating }}</span>
+              <span class="value">{{ "%.2f"|format(player.rating) }}</span>
             </div>
-            {% if icon_uri %}
-            <img class="icon-avatar" src="{{ icon_uri }}" />
+            {% if character_uri %}
+            <img class="character-avatar" src="{{ character_uri }}" />
             {% endif %}
           </div>
         </div>
@@ -289,46 +293,51 @@
         {% for score in scores %}
         <div class="score-card">
           <div class="badges">
-            {% if score.fc %}
-            <span class="badge fc-{{ score.fc|lower }}">{{ score.fc|upper }}</span>
-            {% endif %}
-            {% if score.fs %}
-            <span class="badge fs-{{ score.fs|lower }}">{{ score.fs|upper }}</span>
-            {% endif %}
-            {% if score.dx_star > 0 %}
-            <span class="badge">{{ "★" * score.dx_star }}</span>
+            {% if score.full_combo %}
+            <span class="badge fc-{{ score.full_combo|lower }}"
+              >{{ score.fc_display|replace("FULL COMBO", "COMBO")|replace("ALL
+              JUSTICE", "AJ") }}</span
+            >
+            {% endif %} {% if score.full_chain %}
+            <span class="badge">CHAIN</span>
             {% endif %}
           </div>
           <div class="score-card-header">
-            <div>
-              <span class="difficulty-badge diff-{{ score.difficulty_class }}">
-                {{ score.difficulty_name }} {{ score.level }}
-              </span>
-              <span class="type-badge type-{{ score.type }}">
-                {{ "DX" if score.type == "dx" else "STD" }}
-              </span>
-            </div>
+            <span class="difficulty-badge diff-{{ score.difficulty_class }}">
+              {{ score.difficulty_name }} {{ score.level }}
+            </span>
           </div>
           <div class="score-content">
             <div class="score-item">
-              <span class="label">达成率</span>
-              <span class="value">{{ "%.4f"|format(score.achievements) }}%</span>
+              <span class="label">分数</span>
+              <span class="value">{{ score.score }}</span>
             </div>
             <div class="score-item">
               <span class="label">评级</span>
-              <span class="value">{{ score.rate|upper }}</span>
+              <span class="value rank-{{ score.rank|lower }}"
+                >{{ score.rank|upper }}</span
+              >
             </div>
             <div class="score-item">
-              <span class="label">DX分数</span>
-              <span class="value">{{ score.dx_score }}</span>
+              <span class="label">Rating</span>
+              <span class="value">{{ "%.2f"|format(score.rating) }}</span>
             </div>
             <div class="score-item">
-              <span class="label">DX Rating</span>
-              <span class="value">{{ score.dx_rating|int }}</span>
+              <span class="label">Over Power</span>
+              <span class="value">{{ "%.2f"|format(score.over_power) }}</span>
+            </div>
+            <div class="score-item">
+              <span class="label">通关类型</span>
+              <span
+                class="value clear-{{ score.clear|lower if score.clear else 'none' }}"
+                >{{ score.clear_display if score.clear else "-" }}</span
+              >
             </div>
             <div class="score-item">
               <span class="label">游玩时间</span>
-              <span class="value">{{ score.play_time }}</span>
+              <span class="value"
+                >{{ score.play_time if score.play_time else "-" }}</span
+              >
             </div>
           </div>
         </div>

@@ -98,6 +98,20 @@ class AssetManager:
             f"chu_jacket_{song_id}.png",
         )
 
+    async def download_chunithm_character(self, character_id: int) -> str:
+        """下载指定角色 ID 的立绘图（中二节奏）。"""
+        return await self.download(
+            f"https://assets2.lxns.net/chunithm/character/{character_id}.png",
+            f"chu_character_{character_id}.png",
+        )
+
+    async def download_maimai_icon(self, icon_id: int) -> str:
+        """下载指定 icon ID 的 icon 图标（舞萌DX）。"""
+        return await self.download(
+            f"https://assets2.lxns.net/maimai/icon/{icon_id}.png",
+            f"maimai_icon_{icon_id}.png",
+        )
+
     def serialize_to_data_uri(self, name: str) -> str:
         """读取缓存文件并返回 base64 Data URI。仅接受有效 PNG，否则清除缓存并返回空字符串。"""
         local = self._dir / name
@@ -118,6 +132,16 @@ class AssetManager:
     async def get_chunithm_jacket_data_uri(self, song_id: int) -> str:
         """下载并返回中二节奏封面 base64 Data URI。"""
         path = await self.download_chunithm_jacket(song_id)
+        return self.serialize_to_data_uri(Path(path).name) if path else ""
+
+    async def get_chunithm_character_data_uri(self, character_id: int) -> str:
+        """下载并返回中二节奏角色立绘 base64 Data URI。"""
+        path = await self.download_chunithm_character(character_id)
+        return self.serialize_to_data_uri(Path(path).name) if path else ""
+
+    async def get_maimai_icon_data_uri(self, icon_id: int) -> str:
+        """下载并返回舞萌 icon base64 Data URI。"""
+        path = await self.download_maimai_icon(icon_id)
         return self.serialize_to_data_uri(Path(path).name) if path else ""
 
     async def download_jackets_batch(self, song_ids: list[int]) -> dict[int, str]:

@@ -1,5 +1,6 @@
 """舞萌DX 查分功能"""
 
+from datetime import datetime, timezone, timedelta
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
@@ -10,6 +11,28 @@ from .models import (
     DIFFICULTY_SHORT,
     JINJA_OPTIONS,
 )
+
+
+def format_play_time(utc_time_str: str) -> str:
+    """将UTC时间转换为GMT+8并格式化显示。
+
+    Args:
+        utc_time_str: UTC时间字符串，如 "2026-05-21T11:15:00Z"
+
+    Returns:
+        格式化的时间字符串，如 "2026-05-21 19:15"
+    """
+    if not utc_time_str:
+        return "-"
+    try:
+        # 解析UTC时间
+        utc_time = datetime.fromisoformat(utc_time_str.replace("Z", "+00:00"))
+        # 转换为GMT+8
+        gmt8 = utc_time.astimezone(timezone(timedelta(hours=8)))
+        # 格式化为简化显示
+        return gmt8.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return utc_time_str
 
 
 class MaimaiHandler:
@@ -220,24 +243,19 @@ class MaimaiHandler:
     # --- /lxdx score ---
 
     async def score(self, ev: AstrMessageEvent):
-        """查询单曲成绩：/lxdx score <歌曲名/ID> <难度> [类型]。
+        """查询单曲成绩：/lxdx score <歌曲名> [难度] [类型]。
 
-        难度: 0-4 或 basic/advanced/expert/master/remaster
-        类型: std/dx (可选，默认查询所有类型)
+        难度: 0-4 或 basic/advanced/expert/master/remaster (可选，不指定时查询所有难度)
+        类型: std/dx (可选)
         """
         args = self._args(ev, 2)
-        if len(args) < 2:
+        if not args:
             yield ev.plain_result(
-                "用法: /lxdx score <歌曲名/ID> <难度> [类型]\n难度: 0-4 或 basic/advanced/expert/master/remaster\n类型: std/dx (可选)"
+                "用法: /lxdx score <歌曲名> [难度] [类型]\n难度: 0-4 或 basic/advanced/expert/master/remaster (可选)\n类型: std/dx (可选)"
             )
             return
 
-        # 解析参数
-        q = args[0]
-        diff_str = args[1].lower()
-        song_type = args[2].lower() if len(args) > 2 else ""
-
-        # 解析难度
+        # 解析难度映射
         diff_map = {
             "basic": 0,
             "bas": 0,
@@ -255,12 +273,28 @@ class MaimaiHandler:
             "rem": 4,
             "4": 4,
         }
-        level_index = diff_map.get(diff_str, -1)
-        if level_index == -1:
-            yield ev.plain_result(
-                f"无效难度: {diff_str}\n支持: 0-4 或 basic/advanced/expert/master/remaster"
-            )
+
+        # 从后往前解析参数：最后一个可能是类型，倒数第二个可能是难度
+        song_type = ""
+        level_index = -1
+        song_query_parts = args[:]
+
+        # 检查最后一个参数是否是类型
+        if args[-1].lower() in ("std", "dx", "standard"):
+            song_type = "dx" if args[-1].lower() == "dx" else "standard"
+            song_query_parts = args[:-1]
+
+        # 检查倒数第一个（或倒数第二个如果有类型）参数是否是难度
+        if song_query_parts and song_query_parts[-1].lower() in diff_map:
+            level_index = diff_map[song_query_parts[-1].lower()]
+            song_query_parts = song_query_parts[:-1]
+
+        # 剩余部分是歌曲名
+        if not song_query_parts:
+            yield ev.plain_result("请提供歌曲名")
             return
+
+        q = " ".join(song_query_parts)
 
         # 查找歌曲（复用查歌逻辑，兼容别名）
         uid = ev.get_sender_id()
@@ -289,7 +323,112 @@ class MaimaiHandler:
                 yield ev.plain_result("请先绑定好友码: /lxdx bind <好友码>")
                 return
 
-        # 查询成绩（只使用song_id）
+        # 如果未指定难度，查询所有难度
+        if level_index == -1:
+            found_scores = []
+            for idx in range(5):  # 0-4: basic, advanced, expert, master, remaster
+                try:
+                    score = await self._p._client.get_player_best(
+                        song_id=song.id,
+                        level_index=idx,
+                        song_type=song_type,
+                        fc=fc,
+                        uid=uid,
+                    )
+                    if score:
+                        found_scores.append((idx, score))
+                except Exception:
+                    continue
+
+            if not found_scores:
+                yield ev.plain_result(f"未找到成绩: {song.title}")
+                return
+
+            # 按难度索引降序排序（难度越高索引越大），取前三个
+            found_scores.sort(key=lambda x: x[0], reverse=True)
+            found_scores = found_scores[:3]
+
+            # 获取玩家信息及icon
+            icon_uri = ""
+            try:
+                pi = await self._p._client.get_player_info(fc=fc, uid=uid)
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] Maimai player info fetched: name={pi.name if pi else 'None'}, rating={pi.rating if pi else 0}"
+                    )
+                if pi and pi.icon and isinstance(pi.icon, dict):
+                    icon_id = pi.icon.get("id", 0)
+                    if icon_id:
+                        if self._p._debug:
+                            logger.info(f"[lxdx] fetching Maimai icon for id={icon_id}")
+                        icon_uri = await self._p._am.get_maimai_icon_data_uri(icon_id)
+            except Exception as e:
+                logger.warning(f"[lxdx] failed to fetch player info: {e}")
+                pi = None
+
+            # 渲染多难度模板
+            t = self._p._tmpl.get("song_score")
+            if t:
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] rendering song_score for {song.title} (multiple difficulties)"
+                    )
+                uri = await self._p._am.get_jacket_data_uri(song.id) or ""
+
+                # 构建scores数组
+                scores_data = []
+                for idx, score in found_scores:
+                    scores_data.append(
+                        {
+                            "type": score.type,
+                            "difficulty_name": DIFFICULTY_NAMES[idx],
+                            "difficulty_class": DIFFICULTY_NAMES[idx]
+                            .lower()
+                            .replace(":", ""),
+                            "level": score.level,
+                            "achievements": score.achievements,
+                            "rate": score.rate,
+                            "dx_score": score.dx_score,
+                            "dx_rating": score.dx_rating,
+                            "fc": score.fc,
+                            "fs": score.fs,
+                            "dx_star": score.dx_star,
+                            "play_time": format_play_time(score.play_time)
+                            if score.play_time
+                            else "-",
+                        }
+                    )
+
+                url = await self._p.render_html(
+                    t,
+                    {
+                        "song": {
+                            "title": song.title,
+                        },
+                        "player": {
+                            "name": pi.name if pi else "Unknown",
+                            "rating": pi.rating if pi else 0,
+                        },
+                        "scores": scores_data,
+                        "jacket_data_uri": uri,
+                        "icon_uri": icon_uri,
+                    },
+                    options=JINJA_OPTIONS,
+                )
+                yield ev.image_result(url)
+            else:
+                # 纯文本输出
+                lines = [f"{song.title} 成绩:"]
+                for idx, score in found_scores:
+                    chart_type = "DX" if score.type == "dx" else "STD"
+                    diff_name = DIFFICULTY_NAMES[idx]
+                    lines.append(
+                        f"{chart_type} {diff_name} {score.level}: {score.achievements:.4f}% ({score.rate.upper()})"
+                    )
+                yield ev.plain_result("\n".join(lines))
+            return
+
+        # 查询指定难度的成绩
         try:
             score = await self._p._client.get_player_best(
                 song_id=song.id,
@@ -304,9 +443,20 @@ class MaimaiHandler:
                 )
                 return
 
-            # 获取玩家信息
+            # 获取玩家信息及icon
+            icon_uri = ""
             try:
                 pi = await self._p._client.get_player_info(fc=fc, uid=uid)
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] Maimai player info fetched: name={pi.name if pi else 'None'}, rating={pi.rating if pi else 0}"
+                    )
+                if pi and pi.icon and isinstance(pi.icon, dict):
+                    icon_id = pi.icon.get("id", 0)
+                    if icon_id:
+                        if self._p._debug:
+                            logger.info(f"[lxdx] fetching Maimai icon for id={icon_id}")
+                        icon_uri = await self._p._am.get_maimai_icon_data_uri(icon_id)
             except Exception as e:
                 logger.warning(f"[lxdx] failed to fetch player info: {e}")
                 pi = None
@@ -326,24 +476,27 @@ class MaimaiHandler:
                         "player": {
                             "name": pi.name if pi else "Unknown",
                             "rating": pi.rating if pi else 0,
-                            "friend_code": pi.friend_code if pi else fc,
                         },
-                        "score": {
-                            "type": score.type,
-                            "difficulty_name": DIFFICULTY_NAMES[level_index],
-                            "difficulty_class": DIFFICULTY_NAMES[level_index]
-                            .lower()
-                            .replace(":", ""),
-                            "level": score.level,
-                            "achievements": score.achievements,
-                            "rate": score.rate,
-                            "dx_score": score.dx_score,
-                            "dx_rating": score.dx_rating,
-                            "fc": score.fc,
-                            "fs": score.fs,
-                            "dx_star": score.dx_star,
-                            "play_time": score.play_time or "-",
-                        },
+                        "scores": [
+                            {
+                                "type": score.type,
+                                "difficulty_name": DIFFICULTY_NAMES[level_index],
+                                "difficulty_class": DIFFICULTY_NAMES[level_index]
+                                .lower()
+                                .replace(":", ""),
+                                "level": score.level,
+                                "achievements": score.achievements,
+                                "rate": score.rate,
+                                "dx_score": score.dx_score,
+                                "dx_rating": score.dx_rating,
+                                "fc": score.fc,
+                                "fs": score.fs,
+                                "dx_star": score.dx_star,
+                                "play_time": format_play_time(score.play_time)
+                                if score.play_time
+                                else "-",
+                            }
+                        ],
                         "jacket_data_uri": uri,
                     },
                     options=JINJA_OPTIONS,

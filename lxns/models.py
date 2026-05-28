@@ -171,6 +171,7 @@ class PlayerInfo:
     rating: int
     friend_code: str
     class_rank: int
+    icon: Optional[dict] = None
 
 
 @dataclass

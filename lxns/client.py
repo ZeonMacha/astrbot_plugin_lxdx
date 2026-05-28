@@ -40,14 +40,17 @@ class LxnsClient:
         auth: LxnsAuth,
         redirect_uri: str = "",
         api_key: str = "",
+        is_oauth: bool = True,
         debug: bool = False,
         on_token_refresh: Optional[Callable[[str, TokenInfo], Awaitable[None]]] = None,
     ):
         """auth: PKCE 授权管理实例；redirect_uri: OAuth 回调地址；api_key: 开发者 Key（可选）；
+        is_oauth: 是否为OAuth模式（True=OAuth, False=API Key）；
         debug: 开启调试日志；on_token_refresh: Token 刷新时将新 Token 持久化到 KV 的回调（uid, TokenInfo）→ awaitable。"""
         self._auth = auth
         self._redirect_uri = redirect_uri
         self._api_key = api_key
+        self._is_oauth = is_oauth
         self._debug = debug
         self._on_token_refresh = on_token_refresh
 
@@ -167,7 +170,7 @@ class LxnsClient:
 
     async def _auth_headers(self, uid: str = "") -> dict:
         """构建认证请求头。API Key 模式返回 Authorization；OAuth 模式返回 Bearer Token，过期时自动刷新。"""
-        if self._api_key:
+        if not self._is_oauth:
             return {"Authorization": self._api_key}
         t = self._auth.get_tokens(uid)
         if not t:
@@ -222,7 +225,7 @@ class LxnsClient:
         """根据认证模式选择 API 基础路径：API Key 用 /maimai，OAuth 用 /user/maimai。"""
         return (
             f"{BASE_URL}/api/v0/maimai"
-            if self._api_key
+            if not self._is_oauth
             else f"{BASE_URL}/api/v0/user/maimai"
         )
 
@@ -250,7 +253,7 @@ class LxnsClient:
     async def get_player_info(self, fc: str = "", uid: str = "") -> PlayerInfo:
         """获取玩家基本信息。API Key 模式通过 fc 查询，OAuth 模式通过当前 uid 查询。"""
         b = self._endpoint_base()
-        u = f"{b}/player/{fc}" if self._api_key and fc else f"{b}/player"
+        u = f"{b}/player/{fc}" if not self._is_oauth and fc else f"{b}/player"
         d = await self._api_get(u, uid)
         inner = d.get("data", d)
         return PlayerInfo(
@@ -258,14 +261,15 @@ class LxnsClient:
             rating=inner.get("rating", 0),
             friend_code=inner.get("friend_code", fc),
             class_rank=inner.get("class_rank", 0),
+            icon=inner.get("icon"),
         )
 
     async def get_b50(self, fc: str = "", uid: str = "") -> PlayerB50:
         """获取 Best 50 数据（新曲 Best 35 + 旧曲 Recent 15）。"""
         b = self._endpoint_base()
-        if self._api_key and fc:
+        if not self._is_oauth and fc:
             u = f"{b}/player/{fc}/bests"
-        elif self._api_key:
+        elif not self._is_oauth:
             raise ApiRequestError("开发者 API 模式需要提供 friend_code")
         else:
             u = f"{b}/player/bests"
@@ -317,16 +321,18 @@ class LxnsClient:
 
         query = "&".join(params)
 
-        # 使用 _api_key 判断是否为 API Key 模式
-        if self._api_key and fc:
+        # 使用 _is_oauth 判断模式
+        if not self._is_oauth and fc:
             url = f"{b}/player/{fc}/best?{query}"
-        elif self._api_key:
+        elif not self._is_oauth:
             raise ApiRequestError("开发者 API 模式需要提供 friend_code")
         else:
             url = f"{b}/player/best?{query}"
 
         d = await self._api_get(url, uid)
-        return self._parse_score(d) if d else None
+        # 提取data字段
+        inner = d.get("data", d)
+        return self._parse_score(inner) if inner and inner.get("id") else None
 
     # --- 响应解析器 ---
 

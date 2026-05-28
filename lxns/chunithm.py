@@ -1,5 +1,6 @@
 """中二节奏 查分功能"""
 
+from datetime import datetime, timezone, timedelta
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api import logger
 
@@ -10,6 +11,28 @@ from .models import (
     CHU_DIFFICULTY_SHORT,
     JINJA_OPTIONS,
 )
+
+
+def format_play_time(utc_time_str: str) -> str:
+    """将UTC时间转换为GMT+8并格式化显示。
+
+    Args:
+        utc_time_str: UTC时间字符串，如 "2026-05-21T11:15:00Z"
+
+    Returns:
+        格式化的时间字符串，如 "2026-05-21 19:15"
+    """
+    if not utc_time_str:
+        return "-"
+    try:
+        # 解析UTC时间
+        utc_time = datetime.fromisoformat(utc_time_str.replace("Z", "+00:00"))
+        # 转换为GMT+8
+        gmt8 = utc_time.astimezone(timezone(timedelta(hours=8)))
+        # 格式化为简化显示
+        return gmt8.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return utc_time_str
 
 
 class ChunithmHandler:
@@ -426,3 +449,313 @@ class ChunithmHandler:
             yield ev.image_result(url)
         else:
             yield ev.plain_result(self._chu_song_text(s))
+
+    # --- /lxchu score ---
+
+    async def score(self, ev: AstrMessageEvent):
+        """查询单曲成绩：/lxchu score <歌曲名> [难度]。
+
+        难度: 0-5 或 basic/advanced/expert/master/ultima/worldsend (可选，不指定时查询所有难度)
+        """
+        args = self._args(ev, 2)
+        if not args:
+            yield ev.plain_result(
+                "用法: /lxchu score <歌曲名> [难度]\n难度: 0-5 或 basic/advanced/expert/master/ultima/worldsend (可选)"
+            )
+            return
+
+        # 解析难度映射
+        diff_map = {
+            "basic": 0,
+            "bas": 0,
+            "0": 0,
+            "advanced": 1,
+            "adv": 1,
+            "1": 1,
+            "expert": 2,
+            "exp": 2,
+            "2": 2,
+            "master": 3,
+            "mas": 3,
+            "3": 3,
+            "ultima": 4,
+            "ult": 4,
+            "4": 4,
+            "worldsend": 5,
+            "we": 5,
+            "5": 5,
+        }
+
+        # 从后往前解析参数：最后一个可能是难度
+        level_index = -1
+        song_query_parts = args[:]
+
+        # 检查最后一个参数是否是难度
+        if args[-1].lower() in diff_map:
+            level_index = diff_map[args[-1].lower()]
+            song_query_parts = args[:-1]
+
+        # 剩余部分是歌曲名
+        if not song_query_parts:
+            yield ev.plain_result("请提供歌曲名")
+            return
+
+        q = " ".join(song_query_parts)
+
+        # 查找歌曲（复用查歌逻辑，兼容别名）
+        uid = ev.get_sender_id()
+        if self._p._is_oauth:
+            uid = await self._p._restore_token(ev) or ""
+            if not uid:
+                yield ev.plain_result("请先登录: /lxchu login")
+                return
+
+        res = await self._chu_lookup(q, uid)
+        if not res:
+            yield ev.plain_result(f"未找到歌曲: {q}")
+            return
+        if len(res) > 1:
+            ns = "\n".join(f"  · {s.title} (ID:{s.id})" for s in res[:10])
+            yield ev.plain_result(f"多个结果，请使用ID查询:\n{ns}")
+            return
+
+        song = res[0]
+
+        # 获取好友码（仅API Key模式需要）
+        fc = 0
+        if not self._p._is_oauth:
+            fc_str = await self._p._st.kv_get(self._p._st.chu_binding_key(uid))
+            if not fc_str:
+                yield ev.plain_result("请先绑定好友码: /lxchu bind <好友码>")
+                return
+            try:
+                fc = int(fc_str)
+            except ValueError:
+                yield ev.plain_result("好友码格式错误，请重新绑定")
+                return
+
+        # 如果未指定难度，查询所有难度
+        if level_index == -1:
+            found_scores = []
+            for idx in range(
+                6
+            ):  # 0-5: basic, advanced, expert, master, ultima, worldsend
+                try:
+                    score = await self._p._chu_client.get_player_best(
+                        song_id=song.id,
+                        level_index=idx,
+                        fc=fc,
+                        uid=uid,
+                    )
+                    if score:
+                        found_scores.append((idx, score))
+                except Exception:
+                    continue
+
+            if not found_scores:
+                yield ev.plain_result(f"未找到成绩: {song.title}")
+                return
+
+            # 按难度索引降序排序（难度越高索引越大），取前三个
+            found_scores.sort(key=lambda x: x[0], reverse=True)
+            found_scores = found_scores[:3]
+
+            # 获取玩家信息及角色立绘
+            character_uri = ""
+            try:
+                pi = await self._p._chu_client.get_player_info(fc=fc, uid=uid)
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] Chunithm player info fetched: name={pi.name if pi else 'None'}, rating={pi.rating if pi else 0}"
+                    )
+                if pi and pi.character and isinstance(pi.character, dict):
+                    char_id = pi.character.get("id", 0)
+                    if char_id:
+                        if self._p._debug:
+                            logger.info(
+                                f"[lxdx] fetching Chunithm character for id={char_id}"
+                            )
+                        character_uri = (
+                            await self._p._am.get_chunithm_character_data_uri(char_id)
+                        )
+            except Exception as e:
+                logger.warning(f"[lxdx] failed to fetch Chunithm player info: {e}")
+                pi = None
+
+            # 渲染多难度模板
+            t = self._p._tmpl.get("chunithm_song_score")
+            if t:
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] rendering chunithm_song_score for {song.title} (multiple difficulties)"
+                    )
+                uri = await self._p._am.get_chunithm_jacket_data_uri(song.id) or ""
+
+                # 构建scores数组
+                scores_data = []
+                for idx, score in found_scores:
+                    scores_data.append(
+                        {
+                            "difficulty_name": CHU_DIFFICULTY_NAMES[idx],
+                            "difficulty_class": CHU_DIFFICULTY_NAMES[idx]
+                            .lower()
+                            .replace("'", "")
+                            .replace(" ", "-"),
+                            "level": score.level,
+                            "score": score.score,
+                            "rating": score.rating,
+                            "over_power": score.over_power,
+                            "rank": score.rank,
+                            "clear": score.clear,
+                            "clear_display": score.clear_display,
+                            "full_combo": score.full_combo,
+                            "fc_display": score.fc_display,
+                            "full_chain": score.full_chain,
+                            "play_time": format_play_time(score.play_time)
+                            if score.play_time
+                            else "-",
+                        }
+                    )
+
+                url = await self._p.render_html(
+                    t,
+                    {
+                        "song": {
+                            "title": song.title,
+                        },
+                        "player": {
+                            "name": pi.name if pi else "Unknown",
+                            "rating": pi.rating if pi else 0.0,
+                        },
+                        "scores": scores_data,
+                        "jacket_data_uri": uri,
+                        "character_uri": character_uri,
+                    },
+                    options=JINJA_OPTIONS,
+                )
+                yield ev.image_result(url)
+            else:
+                # 纯文本输出
+                lines = [f"{song.title} 成绩:"]
+                for idx, score in found_scores:
+                    diff_name = CHU_DIFFICULTY_NAMES[idx]
+                    lines.append(
+                        f"{diff_name} {score.level}: {score.score} ({score.rank_display})"
+                    )
+                yield ev.plain_result("\n".join(lines))
+            return
+
+        # 查询指定难度的成绩
+        try:
+            score = await self._p._chu_client.get_player_best(
+                song_id=song.id,
+                level_index=level_index,
+                fc=fc,
+                uid=uid,
+            )
+            if not score:
+                yield ev.plain_result(
+                    f"未找到成绩: {song.title} {CHU_DIFFICULTY_NAMES[level_index]}"
+                )
+                return
+
+            # 获取玩家信息及角色立绘
+            character_uri = ""
+            try:
+                pi = await self._p._chu_client.get_player_info(fc=fc, uid=uid)
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] Chunithm player info fetched: name={pi.name if pi else 'None'}, rating={pi.rating if pi else 0}"
+                    )
+                if pi and pi.character and isinstance(pi.character, dict):
+                    char_id = pi.character.get("id", 0)
+                    if char_id:
+                        if self._p._debug:
+                            logger.info(
+                                f"[lxdx] fetching Chunithm character for id={char_id}"
+                            )
+                        character_uri = (
+                            await self._p._am.get_chunithm_character_data_uri(char_id)
+                        )
+            except Exception as e:
+                logger.warning(f"[lxdx] failed to fetch Chunithm player info: {e}")
+                pi = None
+
+            # 渲染模板
+            t = self._p._tmpl.get("chunithm_song_score")
+            if t:
+                if self._p._debug:
+                    logger.info(
+                        f"[lxdx] rendering chunithm_song_score for {song.title}"
+                    )
+                uri = await self._p._am.get_chunithm_jacket_data_uri(song.id) or ""
+                url = await self._p.render_html(
+                    t,
+                    {
+                        "song": {
+                            "title": song.title,
+                        },
+                        "player": {
+                            "name": pi.name if pi else "Unknown",
+                            "rating": pi.rating if pi else 0.0,
+                        },
+                        "scores": [
+                            {
+                                "difficulty_name": CHU_DIFFICULTY_NAMES[level_index],
+                                "difficulty_class": CHU_DIFFICULTY_NAMES[level_index]
+                                .lower()
+                                .replace("'", "")
+                                .replace(" ", "-"),
+                                "level": score.level,
+                                "score": score.score,
+                                "rating": score.rating,
+                                "over_power": score.over_power,
+                                "rank": score.rank,
+                                "clear": score.clear,
+                                "clear_display": score.clear_display,
+                                "full_combo": score.full_combo,
+                                "fc_display": score.fc_display,
+                                "full_chain": score.full_chain,
+                                "play_time": format_play_time(score.play_time)
+                                if score.play_time
+                                else "-",
+                            }
+                        ],
+                        "jacket_data_uri": uri,
+                    },
+                    options=JINJA_OPTIONS,
+                )
+                yield ev.image_result(url)
+            else:
+                yield ev.plain_result(self._chu_score_text(song, score, level_index))
+        except LxnsError as e:
+            yield ev.plain_result(f"查询失败: {e}")
+        except Exception as e:
+            logger.error(f"[lxdx] Chunithm score query error: {e}")
+            yield ev.plain_result("查询过程中发生错误")
+
+    # --- helpers ---
+
+    @staticmethod
+    def _chu_score_text(song, score, level_index) -> str:
+        """生成单曲成绩的纯文本输出。"""
+        diff_name = (
+            CHU_DIFFICULTY_NAMES[level_index]
+            if level_index < len(CHU_DIFFICULTY_NAMES)
+            else f"LV{level_index}"
+        )
+
+        ls = [
+            f"{song.title}",
+            f"{diff_name} {score.level}",
+            "",
+            f"分数: {score.score}",
+            f"评级: {score.rank_display}",
+            f"Rating: {score.rating:.2f}",
+            f"Over Power: {score.over_power:.2f}",
+            f"通关类型: {score.clear_display if score.clear else '-'}",
+            f"FULL COMBO: {score.fc_display if score.full_combo else '-'}",
+            f"FULL CHAIN: {score.full_chain.upper() if score.full_chain else '-'}",
+            f"游玩时间: {score.play_time if score.play_time else '-'}",
+        ]
+        return "\n".join(ls)

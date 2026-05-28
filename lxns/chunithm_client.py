@@ -38,18 +38,20 @@ class ChunithmClient:
         auth: LxnsAuth,
         redirect_uri: str = "",
         api_key: str = "",
+        is_oauth: bool = True,
         debug: bool = False,
         on_token_refresh: Optional[Callable[[str, TokenInfo], Awaitable[None]]] = None,
     ):
         self._auth = auth
         self._redirect_uri = redirect_uri
         self._api_key = api_key
+        self._is_oauth = is_oauth
         self._debug = debug
         self._on_token_refresh = on_token_refresh
 
     @property
     def _is_api_key_mode(self) -> bool:
-        return bool(self._api_key)
+        return not self._is_oauth
 
     @staticmethod
     def _get_httpx():
@@ -210,6 +212,41 @@ class ChunithmClient:
         d = await self._api_get(u, uid)
         arr = d.get("data", d)
         return [self._parse_score(i) for i in (arr if isinstance(arr, list) else [])]
+
+    async def get_player_best(
+        self,
+        song_id: int,
+        level_index: int = 0,
+        fc: int = 0,
+        uid: str = "",
+    ) -> Optional[ChuScore]:
+        """获取玩家在特定谱面的最佳成绩。
+
+        Args:
+            song_id: 曲目ID
+            level_index: 难度索引（0-5）
+            fc: 好友码（API Key模式）
+            uid: 用户ID（OAuth模式）
+        """
+        b = self._endpoint_base()
+        params = [f"song_id={song_id}"]
+
+        if level_index >= 0:
+            params.append(f"level_index={level_index}")
+
+        query = "&".join(params)
+
+        if self._is_api_key_mode and fc:
+            url = f"{b}/player/{fc}/best?{query}"
+        elif self._is_api_key_mode:
+            raise ApiRequestError("开发者 API 模式需要提供 friend_code")
+        else:
+            url = f"{b}/player/best?{query}"
+
+        d = await self._api_get(url, uid)
+        # 提取data字段
+        inner = d.get("data", d)
+        return self._parse_score(inner) if inner and inner.get("id") else None
 
     # --- Song APIs ---
 

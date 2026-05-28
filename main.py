@@ -57,6 +57,7 @@ class LxdxPlugin(Star):
             debug=self._debug,
             redirect_uri=self._ru,
             api_key=self._api_key,
+            is_oauth=self._method != "api_key",
             on_token_refresh=self._persist_token,
         )
         self._chu_client = ChunithmClient(
@@ -64,6 +65,7 @@ class LxdxPlugin(Star):
             debug=self._debug,
             redirect_uri=self._ru,
             api_key=self._api_key,
+            is_oauth=self._method != "api_key",
             on_token_refresh=self._persist_token,
         )
         self._am = AssetManager(self._st.assets_dir, debug=self._debug)
@@ -120,6 +122,7 @@ class LxdxPlugin(Star):
             "chunithm_help",
             "chunithm_bests",
             "chunithm_song_info",
+            "chunithm_song_score",
             "chunithm_recent",
         ):
             p = self._tdir / f"{n}.html"
@@ -363,4 +366,12 @@ class LxdxPlugin(Star):
     async def _chu_song(self, ev: AstrMessageEvent):
         """查询中二节奏歌曲信息：/lxchu song <名称 或 ID>。"""
         async for r in self._chunithm.song(ev):
+            yield r
+
+    # --- /lxchu score ---
+
+    @lxchu_group.command("score")
+    async def _chu_score(self, ev: AstrMessageEvent):
+        """查询单曲成绩：/lxchu score <歌曲名/ID> <难度>。"""
+        async for r in self._chunithm.score(ev):
             yield r
